@@ -1,12 +1,20 @@
+# Claude Agent SDK
+claude-code-sdk
+
+# Web scraping
 bs4
-yaspin
-pysocks
 requests
+pysocks
+
+# CLI and UI
+click
+yaspin
 streamlit
+
+# Utilities
 python-dotenv
-langchain-openai
-langchain-ollama
-backports.tarfile
-langchain-anthropic
-langchain_community
-langchain_google_genai
+
+# Testing
+pytest
+pytest-asyncio
+pytest-cov
