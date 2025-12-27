@@ -1,81 +1,124 @@
+"""Robin: AI-Powered Dark Web OSINT Tool - Main CLI entry point."""
+import asyncio
 import click
-import subprocess
-from yaspin import yaspin
+import sys
 from datetime import datetime
-from scrape import scrape_multiple
-from search import get_search_results
-from llm import get_llm, refine_query, filter_results, generate_summary
-from llm_utils import get_model_choices
 
-MODEL_CHOICES = get_model_choices()
+from config import DEFAULT_MODEL
 
 
 @click.group()
 @click.version_option()
 def robin():
-    """Robin: AI-Powered Dark Web OSINT Tool."""
+    """Robin: AI-Powered Dark Web OSINT Tool using Claude Agent SDK."""
     pass
 
 
 @robin.command()
 @click.option(
-    "--model",
-    "-m",
-    default="gpt-5-mini",
-    show_default=True,
-    type=click.Choice(MODEL_CHOICES),
-    help="Select LLM model to use (e.g., gpt4o, claude sonnet 3.5, ollama models)",
-)
-@click.option("--query", "-q", required=True, type=str, help="Dark web search query")
-@click.option(
-    "--threads",
-    "-t",
-    default=5,
-    show_default=True,
-    type=int,
-    help="Number of threads to use for scraping (Default: 5)",
-)
-@click.option(
-    "--output",
-    "-o",
+    "--query", "-q",
+    required=True,
     type=str,
-    help="Filename to save the final intelligence summary. If not provided, a filename based on the current date and time is used.",
+    help="Dark web investigation query",
 )
-def cli(model, query, threads, output):
-    """Run Robin in CLI mode.\n
-    Example commands:\n
-    - robin -m gpt4o -q "ransomware payments" -t 12\n
-    - robin --model claude-3-5-sonnet-latest --query "sensitive credentials exposure" --threads 8 --output filename\n
-    - robin -m llama3.1 -q "zero days"\n
+@click.option(
+    "--output", "-o",
+    type=str,
+    help="Filename to save the report. If not provided, auto-generated.",
+)
+@click.option(
+    "--interactive", "-i",
+    is_flag=True,
+    default=False,
+    help="Enable interactive mode for follow-up queries",
+)
+@click.option(
+    "--model", "-m",
+    default=DEFAULT_MODEL,
+    show_default=True,
+    type=str,
+    help="Claude model to use",
+)
+def cli(query: str, output: str, interactive: bool, model: str):
+    """Run Robin in CLI mode.
+
+    Examples:
+    \b
+      robin cli -q "ransomware payments"
+      robin cli -q "threat actor APT28" -o report
+      robin cli -q "credential leaks" --interactive
     """
-    llm = get_llm(model)
+    asyncio.run(_run_cli(query, output, interactive, model))
 
-    # Show spinner while processing the query
-    with yaspin(text="Processing...", color="cyan") as sp:
-        refined_query = refine_query(llm, query)
 
-        search_results = get_search_results(
-            refined_query.replace(" ", "+"), max_workers=threads
-        )
+async def _run_cli(query: str, output: str, interactive: bool, model: str):
+    """Async CLI implementation."""
+    from agent import RobinAgent, InvestigationResult
 
-        search_filtered = filter_results(llm, refined_query, search_results)
+    # Track tool usage for display
+    tool_calls = []
 
-        scraped_results = scrape_multiple(search_filtered, max_workers=threads)
-        sp.ok("✔")
+    def on_tool_use(name: str, input_data: dict):
+        tool_calls.append(name)
+        click.echo(f"\n  [Tool] {name}", nl=False)
 
-    # Generate the intelligence summary.
-    summary = generate_summary(llm, query, scraped_results)
+    def on_text(text: str):
+        # Stream text to terminal
+        click.echo(text, nl=False)
 
-    # Save or print the summary
-    if not output:
-        now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        filename = f"summary_{now}.md"
-    else:
-        filename = output + ".md"
+    def on_complete(result: InvestigationResult):
+        click.echo(f"\n\n[Completed] {result.num_turns or 'N/A'} turns, "
+                   f"{len(result.tools_used)} tools used")
 
-    with open(filename, "w", encoding="utf-8") as f:
-        f.write(summary)
-        click.echo(f"\n\n[OUTPUT] Final intelligence summary saved to {filename}")
+    agent = RobinAgent(
+        on_text=on_text,
+        on_tool_use=on_tool_use,
+        on_complete=on_complete,
+        model=model,
+    )
+
+    click.echo(f"\n{'='*60}")
+    click.echo("Robin - Dark Web OSINT Agent")
+    click.echo(f"{'='*60}")
+    click.echo(f"\nQuery: {query}\n")
+
+    # Run initial investigation
+    full_response = ""
+    async for chunk in agent.investigate(query):
+        full_response += chunk
+
+    # Save report if output specified or auto-generate
+    if output or not interactive:
+        if not output:
+            now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            output = f"robin_report_{now}"
+
+        filename = output if output.endswith(".md") else f"{output}.md"
+
+        with open(filename, "w", encoding="utf-8") as f:
+            f.write(full_response)
+
+        click.echo(f"\n[Saved] Report saved to {filename}")
+
+    # Interactive mode for follow-ups
+    if interactive:
+        click.echo("\n" + "="*60)
+        click.echo("Interactive Mode - Enter follow-up queries (Ctrl+C to exit)")
+        click.echo("="*60)
+
+        while True:
+            try:
+                follow_up = click.prompt("\nFollow-up", type=str)
+                if follow_up.lower() in ("exit", "quit", "q"):
+                    break
+
+                click.echo()
+                async for chunk in agent.follow_up(follow_up):
+                    pass  # on_text callback handles output
+
+            except (KeyboardInterrupt, EOFError):
+                click.echo("\n\nExiting interactive mode.")
+                break
 
 
 @robin.command()
@@ -93,21 +136,19 @@ def cli(model, query, threads, output):
     type=str,
     help="Host for the Streamlit UI",
 )
-def ui(ui_port, ui_host):
+def ui(ui_port: int, ui_host: str):
     """Run Robin in Web UI mode."""
-    import sys, os
-
-    # Use streamlit's internet CLI entrypoint
+    import os
     from streamlit.web import cli as stcli
 
-    # When PyInstaller one-file, data files livei n _MEIPASS
+    # Handle PyInstaller one-file mode
     if getattr(sys, "frozen", False):
         base = sys._MEIPASS
     else:
         base = os.path.dirname(__file__)
 
     ui_script = os.path.join(base, "ui.py")
-    # Build sys.argv
+
     sys.argv = [
         "streamlit",
         "run",
@@ -116,7 +157,7 @@ def ui(ui_port, ui_host):
         f"--server.address={ui_host}",
         "--global.developmentMode=false",
     ]
-    # This will never return until streamlit exits
+
     sys.exit(stcli.main())
 
 
