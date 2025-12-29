@@ -4,7 +4,7 @@ from enum import Enum
 from typing import Any, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class InvestigationStatus(str, Enum):
@@ -28,14 +28,29 @@ class FollowUpRequest(BaseModel):
 
 class ToolExecution(BaseModel):
     """Record of a tool execution."""
-    id: str
-    tool: str
-    input: dict[str, Any]
+    id: Optional[str] = None
+    tool: Optional[str] = None
+    name: Optional[str] = None  # Alternative field name for tool
+    input: Optional[dict[str, Any]] = None
     output: Optional[str] = None
-    started_at: datetime
+    started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
     duration_ms: Optional[int] = None
-    status: str = "running"
+    status: str = "completed"
+
+    @model_validator(mode='before')
+    @classmethod
+    def normalize_fields(cls, data: Any) -> Any:
+        """Normalize tool/name field and ensure id exists."""
+        if isinstance(data, dict):
+            # Use 'name' as 'tool' if 'tool' is not present
+            if 'tool' not in data and 'name' in data:
+                data['tool'] = data['name']
+            # Generate id if not present
+            if 'id' not in data:
+                import uuid
+                data['id'] = str(uuid.uuid4())
+        return data
 
 
 class SubAgentResultModel(BaseModel):
