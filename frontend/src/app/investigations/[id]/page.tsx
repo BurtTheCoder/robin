@@ -112,7 +112,7 @@ export default function InvestigationPage() {
 
       {/* Messages Area */}
       <ScrollArea className="flex-1 p-4">
-        <div className="max-w-4xl mx-auto space-y-6">
+        <div className="max-w-6xl mx-auto space-y-6">
           {messages.map((message) => (
             <MessageBubble key={message.id} message={message} />
           ))}
@@ -171,7 +171,7 @@ export default function InvestigationPage() {
 
       {/* Follow-up Input */}
       <div className="p-4 border-t border-border bg-card/50 backdrop-blur-sm">
-        <form onSubmit={handleFollowUp} className="max-w-4xl mx-auto flex gap-2">
+        <form onSubmit={handleFollowUp} className="max-w-6xl mx-auto flex gap-2">
           <Input
             placeholder="Ask a follow-up question..."
             value={followUpQuery}
@@ -212,7 +212,7 @@ function MessageBubble({ message }: { message: Message }) {
           <Bot className="h-4 w-4 text-primary" />
         )}
       </div>
-      <Card className={`flex-1 max-w-[80%] ${isUser ? 'bg-primary text-primary-foreground' : ''}`}>
+      <Card className={`flex-1 ${isUser ? 'bg-primary text-primary-foreground max-w-[80%]' : ''}`}>
         <CardContent className="p-4">
           {isUser ? (
             <p className="text-sm">{message.content}</p>

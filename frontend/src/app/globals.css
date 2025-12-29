@@ -171,6 +171,19 @@
 /* Markdown Content Styles */
 .markdown-content {
   @apply text-sm leading-relaxed;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+/* Long text handling for crypto addresses, URLs, hashes, etc. */
+.markdown-content p,
+.markdown-content li,
+.markdown-content td,
+.markdown-content code {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 /* Headers */
@@ -221,6 +234,9 @@
 /* Inline code */
 .markdown-content .md-inline-code {
   @apply bg-zinc-800/80 text-emerald-400 px-1.5 py-0.5 rounded text-[0.85em] font-mono;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-all;
 }
 
 /* Lists */
