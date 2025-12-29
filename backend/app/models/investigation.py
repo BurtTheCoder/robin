@@ -65,6 +65,14 @@ class InvestigationSummary(BaseModel):
     completed_at: Optional[datetime] = None
 
 
+class ListInvestigationsResponse(BaseModel):
+    """Paginated response for investigation list."""
+    investigations: list[InvestigationSummary]
+    total: int
+    page: int
+    page_size: int
+
+
 class InvestigationDetail(BaseModel):
     """Full investigation details."""
     id: UUID

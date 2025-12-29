@@ -141,35 +141,32 @@ export async function getHistory(
   const limit = filters.limit || 20;
 
   params.set('page', page.toString());
-  params.set('limit', limit.toString());
+  params.set('page_size', limit.toString());
 
   if (filters.search) params.set('search', filters.search);
   if (filters.query) params.set('search', filters.query);
 
-  // Use the /investigations endpoint which exists
-  const investigations = await fetchAPI<InvestigationSummary[]>(
+  // Backend returns ListInvestigationsResponse with { investigations, total, page, page_size }
+  const response = await fetchAPI<ListInvestigationsResponse>(
     `/investigations?${params.toString()}`
   );
 
-  // Transform to expected format
-  // Note: Backend doesn't return total, so we estimate
-  const hasMore = investigations.length === limit;
-  const estimatedTotal = hasMore ? (page * limit) + 1 : ((page - 1) * limit) + investigations.length;
-
   // Client-side filtering for status (backend doesn't support it yet)
-  let filtered = investigations;
+  let filtered = response.investigations;
   if (filters.status && filters.status.length > 0) {
-    filtered = investigations.filter(inv =>
+    filtered = response.investigations.filter(inv =>
       filters.status!.includes(inv.status as 'completed' | 'failed' | 'running' | 'pending' | 'streaming' | 'error')
     );
   }
 
+  const totalPages = Math.ceil(response.total / response.page_size);
+
   return {
     items: filtered,
-    total: estimatedTotal,
-    page: page,
-    totalPages: hasMore ? page + 1 : page,
-    page_size: limit,
+    total: response.total,
+    page: response.page,
+    totalPages: totalPages,
+    page_size: response.page_size,
   };
 }
 

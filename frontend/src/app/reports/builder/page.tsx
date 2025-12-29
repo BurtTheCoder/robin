@@ -15,7 +15,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import ReportBuilder from '@/components/reports/ReportBuilder';
 import ReportPreview from '@/components/reports/ReportPreview';
-import { Report, ReportSection, InvestigationSummary, CreateReportRequest } from '@/types';
+import type { Report, ReportSection, InvestigationSummary, CreateReportRequest } from '@/types';
 import { getReport, getInvestigations, createReport, updateReport } from '@/lib/api';
 
 function ReportBuilderContent() {
@@ -41,7 +41,8 @@ function ReportBuilderContent() {
       try {
         // Load investigations
         const invData = await getInvestigations();
-        setInvestigations(invData.investigations);
+        const invList = invData.investigations || [];
+        setInvestigations(invList);
 
         if (reportId) {
           // Load existing report
@@ -61,14 +62,14 @@ function ReportBuilderContent() {
               order: 0,
             },
           ]);
-          if (invData.investigations.length > 0 && !initialInvestigationId) {
-            setSelectedInvestigationId(invData.investigations[0].id);
+          if (invList.length > 0 && !initialInvestigationId) {
+            setSelectedInvestigationId(invList[0].id);
           }
         }
       } catch (err) {
         console.error('Failed to load data:', err);
         // Mock investigations for development
-        setInvestigations([
+        const mockInvestigations: InvestigationSummary[] = [
           {
             id: 'inv-1',
             initial_query: 'APT28 ransomware campaign',
@@ -83,7 +84,8 @@ function ReportBuilderContent() {
             created_at: new Date().toISOString(),
             entity_count: 3,
           },
-        ]);
+        ];
+        setInvestigations(mockInvestigations);
         setSelectedInvestigationId('inv-1');
 
         if (!reportId) {

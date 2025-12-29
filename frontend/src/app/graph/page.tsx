@@ -65,14 +65,15 @@ export default function GraphPage() {
     async function loadInvestigations() {
       try {
         const response = await getInvestigations();
-        setInvestigations(response.investigations);
-        if (response.investigations.length > 0) {
-          setSelectedInvestigationId(response.investigations[0].id);
+        const invList = response.investigations || [];
+        setInvestigations(invList);
+        if (invList.length > 0) {
+          setSelectedInvestigationId(invList[0].id);
         }
       } catch (err) {
         console.error('Failed to load investigations:', err);
         // Use mock data for development
-        setInvestigations([
+        const mockInvestigations: InvestigationSummary[] = [
           {
             id: '1',
             initial_query: 'ransomware investigation',
@@ -87,7 +88,8 @@ export default function GraphPage() {
             created_at: new Date().toISOString(),
             entity_count: 8,
           },
-        ]);
+        ];
+        setInvestigations(mockInvestigations);
         setSelectedInvestigationId('1');
       }
     }

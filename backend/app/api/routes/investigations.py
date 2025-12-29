@@ -6,7 +6,7 @@ from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
-from sqlalchemy import select, desc
+from sqlalchemy import select, desc, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...db.database import get_db
@@ -18,6 +18,7 @@ from ...models.investigation import (
     InvestigationSummary,
     InvestigationStatus,
     FollowUpRequest,
+    ListInvestigationsResponse,
 )
 from ...models.graph import GraphData
 from ...services.agent_service import (
@@ -250,38 +251,52 @@ async def _run_follow_up(
         await agent.stream.emit_error(str(e))
 
 
-@router.get("", response_model=list[InvestigationSummary])
+@router.get("", response_model=ListInvestigationsResponse)
 async def list_investigations(
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
+    page_size: int = Query(None, ge=1, le=100),
     search: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
 ):
     """List investigations with pagination and optional search."""
-    offset = (page - 1) * limit
+    # Support both 'limit' and 'page_size' parameter names
+    effective_limit = page_size if page_size is not None else limit
+    offset = (page - 1) * effective_limit
 
-    stmt = select(Investigation).order_by(desc(Investigation.created_at))
-
+    # Build base query for filtering
+    base_query = select(Investigation)
     if search:
-        stmt = stmt.where(Investigation.initial_query.ilike(f"%{search}%"))
+        base_query = base_query.where(Investigation.initial_query.ilike(f"%{search}%"))
 
-    stmt = stmt.offset(offset).limit(limit)
+    # Get total count
+    count_stmt = select(func.count()).select_from(base_query.subquery())
+    count_result = await db.execute(count_stmt)
+    total = count_result.scalar() or 0
+
+    # Get paginated results
+    stmt = base_query.order_by(desc(Investigation.created_at)).offset(offset).limit(effective_limit)
     result = await db.execute(stmt)
     investigations = result.scalars().all()
 
-    return [
-        InvestigationSummary(
-            id=inv.id,
-            initial_query=inv.initial_query,
-            status=inv.status,
-            model=inv.model,
-            num_turns=inv.num_turns,
-            duration_ms=inv.duration_ms,
-            created_at=inv.created_at,
-            completed_at=inv.completed_at,
-        )
-        for inv in investigations
-    ]
+    return ListInvestigationsResponse(
+        investigations=[
+            InvestigationSummary(
+                id=inv.id,
+                initial_query=inv.initial_query,
+                status=inv.status,
+                model=inv.model,
+                num_turns=inv.num_turns,
+                duration_ms=inv.duration_ms,
+                created_at=inv.created_at,
+                completed_at=inv.completed_at,
+            )
+            for inv in investigations
+        ],
+        total=total,
+        page=page,
+        page_size=effective_limit,
+    )
 
 
 @router.get("/{investigation_id}", response_model=InvestigationDetail)
