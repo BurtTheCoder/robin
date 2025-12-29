@@ -232,7 +232,7 @@ export default function DashboardPage() {
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
                         <h3 className="font-medium truncate">
-                          {truncate(investigation.query, 80)}
+                          {truncate(investigation.initial_query || investigation.query || '', 80)}
                         </h3>
                         <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
                           <span>{formatRelativeTime(investigation.created_at)}</span>

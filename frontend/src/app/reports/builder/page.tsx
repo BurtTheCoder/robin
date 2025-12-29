@@ -199,7 +199,7 @@ function ReportBuilderContent() {
                       value={inv.id}
                       className="text-slate-200 focus:bg-slate-700"
                     >
-                      {inv.query}
+                      {inv.initial_query || inv.query}
                     </SelectItem>
                   ))}
                 </SelectContent>

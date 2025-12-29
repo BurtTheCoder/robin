@@ -45,7 +45,7 @@ export default function InvestigationsPage() {
   });
 
   const filteredInvestigations = data?.investigations?.filter((inv) =>
-    inv.query.toLowerCase().includes(searchQuery.toLowerCase())
+    (inv.initial_query || inv.query || '').toLowerCase().includes(searchQuery.toLowerCase())
   ) || [];
 
   return (
@@ -183,7 +183,7 @@ function InvestigationCard({ investigation }: { investigation: InvestigationSumm
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
               <h3 className="font-medium truncate">
-                {truncate(investigation.query, 100)}
+                {truncate(investigation.initial_query || investigation.query || '', 100)}
               </h3>
               <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1">
