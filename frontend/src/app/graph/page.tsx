@@ -75,14 +75,14 @@ export default function GraphPage() {
         setInvestigations([
           {
             id: '1',
-            query: 'ransomware investigation',
+            initial_query: 'ransomware investigation',
             status: 'completed',
             created_at: new Date().toISOString(),
             entity_count: 15,
           },
           {
             id: '2',
-            query: 'marketplace vendor analysis',
+            initial_query: 'marketplace vendor analysis',
             status: 'completed',
             created_at: new Date().toISOString(),
             entity_count: 8,
@@ -235,7 +235,7 @@ export default function GraphPage() {
                     value={inv.id}
                     className="text-slate-200 focus:bg-slate-700 focus:text-white"
                   >
-                    {inv.query}
+                    {inv.initial_query || inv.query}
                   </SelectItem>
                 ))}
               </SelectContent>
