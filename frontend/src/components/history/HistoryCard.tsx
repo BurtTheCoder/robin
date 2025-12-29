@@ -27,10 +27,10 @@ import { formatRelativeTime, formatDuration, truncate } from '@/lib/utils';
 interface HistoryCardProps {
   id: string;
   query: string;
-  status: 'pending' | 'streaming' | 'completed' | 'error';
+  status: 'pending' | 'streaming' | 'completed' | 'error' | 'running' | 'failed';
   created_at: string;
   duration_ms?: number;
-  entity_count: number;
+  entity_count?: number;
 }
 
 const STATUS_CONFIG = {
@@ -46,7 +46,19 @@ const STATUS_CONFIG = {
     color: 'bg-red-600 text-white',
     iconColor: 'text-red-500',
   },
+  failed: {
+    icon: XCircle,
+    label: 'Failed',
+    color: 'bg-red-600 text-white',
+    iconColor: 'text-red-500',
+  },
   streaming: {
+    icon: Loader2,
+    label: 'Running',
+    color: 'bg-blue-600 text-white',
+    iconColor: 'text-blue-500',
+  },
+  running: {
     icon: Loader2,
     label: 'Running',
     color: 'bg-blue-600 text-white',
@@ -97,12 +109,12 @@ export default function HistoryCard({
             {/* Status Icon */}
             <div
               className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${
-                status === 'streaming' ? 'bg-blue-500/20' : 'bg-slate-700'
+                (status === 'streaming' || status === 'running') ? 'bg-blue-500/20' : 'bg-slate-700'
               }`}
             >
               <StatusIcon
                 className={`h-5 w-5 ${statusConfig.iconColor} ${
-                  status === 'streaming' ? 'animate-spin' : ''
+                  (status === 'streaming' || status === 'running') ? 'animate-spin' : ''
                 }`}
               />
             </div>
@@ -130,10 +142,12 @@ export default function HistoryCard({
                         <span>Duration: {formatDuration(duration_ms)}</span>
                       </div>
                     )}
-                    <div className="flex items-center gap-1">
-                      <Wrench className="h-3.5 w-3.5" />
-                      <span>{entity_count} entities</span>
-                    </div>
+                    {entity_count !== undefined && entity_count > 0 && (
+                      <div className="flex items-center gap-1">
+                        <Wrench className="h-3.5 w-3.5" />
+                        <span>{entity_count} entities</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
