@@ -71,14 +71,14 @@ function ReportBuilderContent() {
         setInvestigations([
           {
             id: 'inv-1',
-            query: 'APT28 ransomware campaign',
+            initial_query: 'APT28 ransomware campaign',
             status: 'completed',
             created_at: new Date().toISOString(),
             entity_count: 5,
           },
           {
             id: 'inv-2',
-            query: 'Dark market vendor analysis',
+            initial_query: 'Dark market vendor analysis',
             status: 'completed',
             created_at: new Date().toISOString(),
             entity_count: 3,
