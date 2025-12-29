@@ -55,7 +55,7 @@ export function MessageBubble({
       {/* Message Content */}
       <div
         className={cn(
-          "flex flex-col max-w-[80%]",
+          "flex flex-col max-w-[85%]",
           isUser ? "items-end" : "items-start"
         )}
       >
@@ -68,12 +68,12 @@ export function MessageBubble({
           )}
         >
           {isUser ? (
-            <p className="whitespace-pre-wrap break-words">{content}</p>
+            <p className="whitespace-pre-wrap break-words text-sm">{content}</p>
           ) : (
-            <div className="prose prose-sm dark:prose-invert max-w-none">
+            <div>
               <Markdown content={content} />
               {isStreaming && (
-                <span className="inline-block w-2 h-4 ml-1 bg-current animate-pulse" />
+                <span className="inline-block w-2 h-5 ml-0.5 bg-primary rounded-sm animate-blink" />
               )}
             </div>
           )}

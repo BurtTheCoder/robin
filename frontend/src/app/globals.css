@@ -167,3 +167,120 @@
     animation-delay: 300ms;
   }
 }
+
+/* Markdown Content Styles */
+.markdown-content {
+  @apply text-sm leading-relaxed;
+}
+
+/* Headers */
+.markdown-content .md-h1 {
+  @apply text-xl font-bold text-foreground mt-5 mb-3 first:mt-0;
+}
+
+.markdown-content .md-h2 {
+  @apply text-lg font-semibold text-foreground mt-5 mb-2 first:mt-0;
+}
+
+.markdown-content .md-h3 {
+  @apply text-base font-semibold text-foreground mt-4 mb-2 first:mt-0;
+}
+
+.markdown-content .md-h4 {
+  @apply text-sm font-semibold text-foreground mt-3 mb-2 first:mt-0;
+}
+
+/* Paragraphs */
+.markdown-content .md-p {
+  @apply text-foreground my-2 first:mt-0 last:mb-0;
+}
+
+/* Bold and Italic */
+.markdown-content .md-bold {
+  @apply font-semibold text-foreground;
+}
+
+.markdown-content .md-italic {
+  @apply italic;
+}
+
+/* Links */
+.markdown-content .md-link {
+  @apply text-primary hover:underline transition-colors;
+}
+
+/* Code blocks */
+.markdown-content .md-code-block {
+  @apply bg-zinc-900 border border-zinc-700 rounded-lg p-4 my-3 overflow-x-auto;
+}
+
+.markdown-content .md-code {
+  @apply text-sm text-zinc-300 font-mono whitespace-pre;
+}
+
+/* Inline code */
+.markdown-content .md-inline-code {
+  @apply bg-zinc-800/80 text-emerald-400 px-1.5 py-0.5 rounded text-[0.85em] font-mono;
+}
+
+/* Lists */
+.markdown-content .md-ul {
+  @apply my-2 pl-5 space-y-1.5;
+}
+
+.markdown-content .md-ol {
+  @apply my-2 pl-5 space-y-1.5;
+}
+
+.markdown-content .md-ul-item {
+  @apply text-foreground list-disc pl-1;
+}
+
+.markdown-content .md-ol-item {
+  @apply text-foreground list-decimal pl-1;
+}
+
+/* Tables */
+.markdown-content .md-table-wrapper {
+  @apply overflow-x-auto my-3 rounded-lg border border-zinc-700;
+}
+
+.markdown-content .md-table {
+  @apply w-full text-sm border-collapse;
+}
+
+.markdown-content .md-tr {
+  @apply border-b border-zinc-700 last:border-b-0;
+}
+
+.markdown-content .md-td {
+  @apply px-3 py-2 text-left;
+}
+
+.markdown-content .md-tr:first-child .md-td {
+  @apply font-semibold bg-zinc-800/50;
+}
+
+/* Blockquotes */
+.markdown-content .md-blockquote {
+  @apply border-l-4 border-primary/50 pl-4 py-1 my-3 text-muted-foreground italic bg-muted/30 rounded-r-md;
+}
+
+/* Horizontal rules */
+.markdown-content .md-hr {
+  @apply border-zinc-700 my-5;
+}
+
+/* Streaming cursor animation */
+@keyframes cursor-blink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0;
+  }
+}
+
+.animate-blink {
+  animation: cursor-blink 1s ease-in-out infinite;
+}
