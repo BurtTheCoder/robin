@@ -59,89 +59,12 @@ export default function HistoryPage() {
         setTotal(data.total);
       } catch (err) {
         console.error('Failed to load history:', err);
-        // Use mock data for development
-        const mockData: InvestigationSummary[] = [
-          {
-            id: '1',
-            query: 'APT28 ransomware campaign analysis',
-            status: 'completed',
-            created_at: new Date(Date.now() - 3600000).toISOString(),
-            duration_ms: 45000,
-            entity_count: 5,
-          },
-          {
-            id: '2',
-            query: 'Dark web marketplace vendor investigation',
-            status: 'completed',
-            created_at: new Date(Date.now() - 7200000).toISOString(),
-            duration_ms: 32000,
-            entity_count: 3,
-          },
-          {
-            id: '3',
-            query: 'CVE-2024-1234 exploitation research',
-            status: 'error',
-            created_at: new Date(Date.now() - 86400000).toISOString(),
-            duration_ms: 12000,
-            entity_count: 2,
-          },
-          {
-            id: '4',
-            query: 'Threat actor infrastructure mapping',
-            status: 'streaming',
-            created_at: new Date(Date.now() - 300000).toISOString(),
-            entity_count: 4,
-          },
-          {
-            id: '5',
-            query: 'Malware family attribution analysis',
-            status: 'completed',
-            created_at: new Date(Date.now() - 172800000).toISOString(),
-            duration_ms: 67000,
-            entity_count: 6,
-          },
-          {
-            id: '6',
-            query: 'Cryptocurrency wallet tracking',
-            status: 'completed',
-            created_at: new Date(Date.now() - 259200000).toISOString(),
-            duration_ms: 89000,
-            entity_count: 4,
-          },
-          {
-            id: '7',
-            query: 'Phishing campaign infrastructure',
-            status: 'completed',
-            created_at: new Date(Date.now() - 345600000).toISOString(),
-            duration_ms: 54000,
-            entity_count: 5,
-          },
-          {
-            id: '8',
-            query: 'Data breach source identification',
-            status: 'error',
-            created_at: new Date(Date.now() - 432000000).toISOString(),
-            duration_ms: 8000,
-            entity_count: 1,
-          },
-        ];
-
-        // Apply mock filtering
-        let filtered = mockData;
-
-        if (searchQuery) {
-          const query = searchQuery.toLowerCase();
-          filtered = filtered.filter((inv) => inv.query.toLowerCase().includes(query));
-        }
-
-        if (selectedStatuses.length > 0) {
-          filtered = filtered.filter((inv) => selectedStatuses.includes(inv.status));
-        }
-
-        setInvestigations(append ? [...investigations, ...filtered] : filtered);
+        // API failed - set error state
+        setError('Failed to load investigations. Please try again.');
+        setInvestigations([]);
         setPage(1);
         setTotalPages(1);
-        setTotal(filtered.length);
+        setTotal(0);
       } finally {
         setLoading(false);
         setLoadingMore(false);

@@ -81,7 +81,7 @@ export default function HistoryList({
         <HistoryCard
           key={investigation.id}
           id={investigation.id}
-          query={investigation.query}
+          query={investigation.initial_query || investigation.query || ''}
           status={investigation.status}
           created_at={investigation.created_at}
           duration_ms={investigation.duration_ms}

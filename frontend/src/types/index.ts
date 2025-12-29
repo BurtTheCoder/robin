@@ -12,11 +12,15 @@ export interface Investigation {
 
 export interface InvestigationSummary {
   id: string;
-  query: string;
-  status: 'pending' | 'streaming' | 'completed' | 'error';
+  initial_query: string;
+  query?: string; // Alias for backwards compatibility
+  status: 'pending' | 'streaming' | 'completed' | 'error' | 'running' | 'failed';
   created_at: string;
-  entity_count: number;
+  completed_at?: string;
+  entity_count?: number;
   duration_ms?: number;
+  model?: string;
+  num_turns?: number;
 }
 
 export interface InvestigationDetail {
