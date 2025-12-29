@@ -22,6 +22,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { Markdown } from '@/components/ui/markdown';
 import { useInvestigationStore } from '@/stores/investigationStore';
 import { formatDuration } from '@/lib/utils';
 import type { Message, ToolExecution, SubAgentResult } from '@/types';
@@ -142,12 +143,10 @@ export default function InvestigationPage() {
               </div>
               <Card className="flex-1">
                 <CardContent className="p-4">
-                  <div className="prose prose-invert prose-sm max-w-none">
-                    {currentResponse}
-                    {isStreaming && (
-                      <span className="inline-block w-2 h-4 ml-1 bg-primary animate-pulse" />
-                    )}
-                  </div>
+                  <Markdown content={currentResponse} />
+                  {isStreaming && (
+                    <span className="inline-block w-2 h-4 ml-1 bg-primary animate-pulse" />
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -215,9 +214,11 @@ function MessageBubble({ message }: { message: Message }) {
       </div>
       <Card className={`flex-1 max-w-[80%] ${isUser ? 'bg-primary text-primary-foreground' : ''}`}>
         <CardContent className="p-4">
-          <div className={`prose prose-sm max-w-none ${isUser ? 'prose-invert' : 'prose-invert'}`}>
-            {message.content}
-          </div>
+          {isUser ? (
+            <p className="text-sm">{message.content}</p>
+          ) : (
+            <Markdown content={message.content} />
+          )}
           {message.tool_executions && message.tool_executions.length > 0 && (
             <div className="mt-3 pt-3 border-t border-border/50">
               <p className="text-xs text-muted-foreground mb-2">Tools used:</p>
