@@ -15,7 +15,6 @@ export function Markdown({ content, className = "" }: MarkdownProps) {
   const renderedContent = useMemo(() => {
     if (!content) return null;
 
-    // Process the markdown content
     let html = content;
 
     // Escape HTML to prevent XSS
@@ -24,18 +23,21 @@ export function Markdown({ content, className = "" }: MarkdownProps) {
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;");
 
-    // Code blocks (``` ... ```) - must be processed first
-    html = html.replace(
-      /```(\w*)\n([\s\S]*?)```/g,
-      (_, lang, code) =>
-        `<pre class="md-code-block"><code class="md-code">${code.trim()}</code></pre>`
-    );
+    // Code blocks (``` ... ```) - must be processed first to protect content
+    const codeBlocks: string[] = [];
+    html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
+      const placeholder = `__CODE_BLOCK_${codeBlocks.length}__`;
+      codeBlocks.push(`<pre class="md-code-block"><code class="md-code">${code.trim()}</code></pre>`);
+      return placeholder;
+    });
 
-    // Inline code (`...`)
-    html = html.replace(
-      /`([^`]+)`/g,
-      '<code class="md-inline-code">$1</code>'
-    );
+    // Inline code (`...`) - protect from other processing
+    const inlineCodes: string[] = [];
+    html = html.replace(/`([^`]+)`/g, (_, code) => {
+      const placeholder = `__INLINE_CODE_${inlineCodes.length}__`;
+      inlineCodes.push(`<code class="md-inline-code">${code}</code>`);
+      return placeholder;
+    });
 
     // Headers - process from h4 to h1 to avoid conflicts
     html = html.replace(/^#### (.+)$/gm, '<h4 class="md-h4">$1</h4>');
@@ -43,11 +45,13 @@ export function Markdown({ content, className = "" }: MarkdownProps) {
     html = html.replace(/^## (.+)$/gm, '<h2 class="md-h2">$1</h2>');
     html = html.replace(/^# (.+)$/gm, '<h1 class="md-h1">$1</h1>');
 
-    // Bold and Italic - process combined first
-    html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
-    html = html.replace(/\*\*(.+?)\*\*/g, '<strong class="md-bold">$1</strong>');
-    html = html.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '<em class="md-italic">$1</em>');
-    html = html.replace(/(?<!_)_(?!_)(.+?)(?<!_)_(?!_)/g, '<em class="md-italic">$1</em>');
+    // Bold and Italic - process combined first, then bold, then italic
+    // Use simpler patterns without lookbehind (for browser compatibility)
+    html = html.replace(/\*\*\*([^*]+)\*\*\*/g, '<strong class="md-bold"><em>$1</em></strong>');
+    html = html.replace(/\*\*([^*]+)\*\*/g, '<strong class="md-bold">$1</strong>');
+    html = html.replace(/\*([^*]+)\*/g, '<em class="md-italic">$1</em>');
+    html = html.replace(/__([^_]+)__/g, '<strong class="md-bold">$1</strong>');
+    html = html.replace(/_([^_]+)_/g, '<em class="md-italic">$1</em>');
 
     // Links
     html = html.replace(
@@ -64,64 +68,85 @@ export function Markdown({ content, className = "" }: MarkdownProps) {
       '<blockquote class="md-blockquote">$1</blockquote>'
     );
 
-    // Unordered lists - mark for grouping
-    html = html.replace(/^[\s]*[-*+] (.+)$/gm, '<li class="md-ul-item">$1</li>');
+    // Tables - process before lists
+    const tableLines = html.split('\n');
+    let inTable = false;
+    let tableHtml = '';
+    const processedLines: string[] = [];
 
-    // Ordered lists - mark for grouping
-    html = html.replace(/^[\s]*(\d+)\. (.+)$/gm, '<li class="md-ol-item" value="$1">$2</li>');
+    for (let i = 0; i < tableLines.length; i++) {
+      const line = tableLines[i];
+      const isTableRow = /^\|(.+)\|$/.test(line.trim());
+      const isSeparator = /^\|[\s\-:|]+\|$/.test(line.trim());
 
-    // Wrap consecutive unordered list items
-    html = html.replace(
-      /(<li class="md-ul-item">[\s\S]*?<\/li>\n?)+/g,
-      '<ul class="md-ul">$&</ul>'
-    );
-
-    // Wrap consecutive ordered list items
-    html = html.replace(
-      /(<li class="md-ol-item"[\s\S]*?<\/li>\n?)+/g,
-      '<ol class="md-ol">$&</ol>'
-    );
-
-    // Tables
-    html = html.replace(
-      /^\|(.+)\|$/gm,
-      (match, tableContent) => {
-        const cells = tableContent.split("|").map((cell: string) => cell.trim());
-
-        // Skip separator rows
-        if (cells.every((cell: string) => /^[-:]+$/.test(cell))) {
-          return "";
+      if (isTableRow && !isSeparator) {
+        if (!inTable) {
+          inTable = true;
+          tableHtml = '<div class="md-table-wrapper"><table class="md-table"><tbody>';
         }
-
-        const cellHtml = cells
-          .map((cell: string) => `<td class="md-td">${cell}</td>`)
-          .join("");
-        return `<tr class="md-tr">${cellHtml}</tr>`;
+        const cells = line.trim().slice(1, -1).split('|').map(c => c.trim());
+        tableHtml += '<tr class="md-tr">' + cells.map(c => `<td class="md-td">${c}</td>`).join('') + '</tr>';
+      } else if (isSeparator) {
+        // Skip separator rows
+        continue;
+      } else {
+        if (inTable) {
+          tableHtml += '</tbody></table></div>';
+          processedLines.push(tableHtml);
+          tableHtml = '';
+          inTable = false;
+        }
+        processedLines.push(line);
       }
-    );
+    }
+    if (inTable) {
+      tableHtml += '</tbody></table></div>';
+      processedLines.push(tableHtml);
+    }
+    html = processedLines.join('\n');
 
-    // Wrap table rows
+    // Unordered lists
+    html = html.replace(/^[\t ]*[-*+] (.+)$/gm, '<li class="md-ul-item">$1</li>');
+
+    // Ordered lists
+    html = html.replace(/^[\t ]*(\d+)\. (.+)$/gm, '<li class="md-ol-item" value="$1">$2</li>');
+
+    // Wrap consecutive list items
     html = html.replace(
-      /(<tr class="md-tr">[\s\S]*?<\/tr>\n?)+/g,
-      '<div class="md-table-wrapper"><table class="md-table"><tbody>$&</tbody></table></div>'
+      /(<li class="md-ul-item">[^]*?<\/li>\n?)+/g,
+      match => `<ul class="md-ul">${match}</ul>`
+    );
+    html = html.replace(
+      /(<li class="md-ol-item"[^]*?<\/li>\n?)+/g,
+      match => `<ol class="md-ol">${match}</ol>`
     );
 
-    // Process paragraphs - wrap text that isn't already in an element
-    // Split by double newlines for paragraph breaks
+    // Process paragraphs - split by double newlines
     const blocks = html.split(/\n\n+/);
     html = blocks.map(block => {
       const trimmed = block.trim();
-      // Don't wrap if already an HTML element or empty
-      if (!trimmed || /^<[a-z]/.test(trimmed)) {
+      if (!trimmed) return '';
+      // Don't wrap if already an HTML element
+      if (/^<[a-zA-Z]/.test(trimmed)) {
         return trimmed;
       }
-      // Handle single newlines within a paragraph
+      // Handle single newlines within a paragraph as line breaks
       const processed = trimmed.replace(/\n/g, '<br />');
       return `<p class="md-p">${processed}</p>`;
-    }).join('\n');
+    }).filter(Boolean).join('\n');
 
-    // Clean up any remaining single newlines between block elements
-    html = html.replace(/>\n</g, '><');
+    // Clean up newlines between block elements
+    html = html.replace(/>\s*\n\s*</g, '><');
+
+    // Restore code blocks
+    codeBlocks.forEach((code, i) => {
+      html = html.replace(`__CODE_BLOCK_${i}__`, code);
+    });
+
+    // Restore inline code
+    inlineCodes.forEach((code, i) => {
+      html = html.replace(`__INLINE_CODE_${i}__`, code);
+    });
 
     return html;
   }, [content]);
