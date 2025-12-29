@@ -236,7 +236,7 @@ export default function DashboardPage() {
                         </h3>
                         <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
                           <span>{formatRelativeTime(investigation.created_at)}</span>
-                          {investigation.entity_count > 0 && (
+                          {investigation.entity_count && investigation.entity_count > 0 && (
                             <span className="flex items-center gap-1">
                               <Network className="h-3.5 w-3.5" />
                               {investigation.entity_count} entities

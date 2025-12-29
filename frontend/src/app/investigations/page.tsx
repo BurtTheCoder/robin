@@ -190,7 +190,7 @@ function InvestigationCard({ investigation }: { investigation: InvestigationSumm
                   <Clock className="h-3.5 w-3.5" />
                   {formatRelativeTime(investigation.created_at)}
                 </span>
-                {investigation.entity_count > 0 && (
+                {investigation.entity_count && investigation.entity_count > 0 && (
                   <span className="flex items-center gap-1">
                     <Network className="h-3.5 w-3.5" />
                     {investigation.entity_count} entities
