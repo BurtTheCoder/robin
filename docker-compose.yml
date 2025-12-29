@@ -1,11 +1,10 @@
 services:
-  # Tor Proxy
+  # Tor Proxy - internal only, accessed by backend via Docker network
   tor:
     image: dperson/torproxy:latest
     container_name: robin-tor
     restart: unless-stopped
-    ports:
-      - "${TOR_SOCKS_PORT:-9050}:9050"
+    # No ports exposed - only accessible within Docker network
     healthcheck:
       test: ["CMD-SHELL", "curl -sf --socks5 localhost:9050 http://check.torproject.org/ > /dev/null || netstat -tln | grep -q ':9050 '"]
       interval: 30s
@@ -13,7 +12,7 @@ services:
       retries: 5
       start_period: 90s
 
-  # PostgreSQL Database
+  # PostgreSQL Database - internal only
   db:
     image: postgres:16-alpine
     container_name: robin-db
@@ -24,15 +23,14 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-robin}
     volumes:
       - pgdata:/var/lib/postgresql/data
-    ports:
-      - "${DB_PORT:-5432}:5432"
+    # No ports exposed - only accessible within Docker network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-robin}"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # FastAPI Backend
+  # FastAPI Backend - localhost only (nginx proxies to this)
   backend:
     build:
       context: .
@@ -44,12 +42,12 @@ services:
       # Anthropic API Key for Claude
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - DEFAULT_MODEL=${DEFAULT_MODEL:-claude-sonnet-4-20250514}
-      - CORS_ORIGINS=${CORS_ORIGINS:-["http://localhost:3000","http://127.0.0.1:3000"]}
+      - CORS_ORIGINS=${CORS_ORIGINS:-["http://localhost","http://127.0.0.1"]}
       - API_PREFIX=/api/v1
       # Tor proxy inside container network
       - TOR_SOCKS_PROXY=socks5h://tor:9050
     ports:
-      - "${BACKEND_PORT:-8000}:8000"
+      - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
     depends_on:
       db:
         condition: service_healthy
@@ -60,21 +58,21 @@ services:
       - ./core:/app/core:ro
       - ./config.py:/app/config.py:ro
 
-  # Next.js Frontend
+  # Next.js Frontend - localhost only (nginx proxies to this)
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
       args:
         - BACKEND_URL=http://backend:8000
-        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000/api/v1}
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-/api/v1}
     container_name: robin-frontend
     restart: unless-stopped
     environment:
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000/api/v1}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-/api/v1}
       - BACKEND_URL=http://backend:8000
     ports:
-      - "${FRONTEND_PORT:-3000}:3000"
+      - "127.0.0.1:${FRONTEND_PORT:-3000}:3000"
     depends_on:
       - backend
 
