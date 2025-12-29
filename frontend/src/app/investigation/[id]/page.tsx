@@ -21,6 +21,7 @@ export default function InvestigationDetailPage() {
     activeTools,
     toolHistory,
     subagentResults,
+    searchProgress,
     connectToStream,
     disconnect,
   } = useInvestigationStore();
@@ -93,6 +94,7 @@ export default function InvestigationDetailPage() {
               currentResponse={currentResponse}
               isStreaming={isStreaming}
               investigationId={investigationId}
+              searchProgress={searchProgress}
             />
           )}
         </div>
@@ -113,6 +115,7 @@ export default function InvestigationDetailPage() {
               activeTools={activeTools}
               toolHistory={toolHistory}
               subagentResults={subagentResults}
+              searchProgress={searchProgress}
               onClose={() => setIsToolPanelOpen(false)}
             />
           )}

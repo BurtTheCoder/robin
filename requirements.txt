@@ -1,15 +1,14 @@
-# Claude Agent SDK
-claude-code-sdk
+# Anthropic SDK
+anthropic
 
 # Web scraping
 bs4
 requests
 pysocks
 
-# CLI and UI
+# CLI
 click
 yaspin
-streamlit
 
 # Utilities
 python-dotenv

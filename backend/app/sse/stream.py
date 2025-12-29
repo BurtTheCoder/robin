@@ -69,6 +69,27 @@ class SSEStreamManager:
             "error": error,
         })
 
+    async def emit_search_progress(
+        self,
+        engine_name: str,
+        status: str,
+        results_count: int,
+        total_engines: int,
+        completed_engines: int,
+        total_results: int,
+        message: str,
+    ) -> None:
+        """Emit search progress event."""
+        await self._emit("search_progress", {
+            "engine_name": engine_name,
+            "status": status,
+            "results_count": results_count,
+            "total_engines": total_engines,
+            "completed_engines": completed_engines,
+            "total_results": total_results,
+            "message": message,
+        })
+
     async def emit_complete(
         self,
         text: str,

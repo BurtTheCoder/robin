@@ -5,15 +5,18 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown } from "lucide-react";
-import { ToolCard, ToolExecution } from "./ToolCard";
+import { ToolCard } from "./ToolCard";
 import { ToolTimeline } from "./ToolTimeline";
-import { SubAgentResults, SubAgentResult } from "./SubAgentResults";
+import { SubAgentResults } from "./SubAgentResults";
+import { SearchProgress } from "./SearchProgress";
+import { ToolExecution, SubAgentResult, SearchProgress as SearchProgressType } from "@/types";
 import { useState } from "react";
 
 interface ToolPanelProps {
   activeTools: ToolExecution[];
   toolHistory: ToolExecution[];
   subagentResults: SubAgentResult[];
+  searchProgress: SearchProgressType | null;
   onClose?: () => void;
 }
 
@@ -21,6 +24,7 @@ export function ToolPanel({
   activeTools,
   toolHistory,
   subagentResults,
+  searchProgress,
   onClose,
 }: ToolPanelProps) {
   const [activeToolsOpen, setActiveToolsOpen] = useState(true);
@@ -30,6 +34,7 @@ export function ToolPanel({
   const hasActiveTools = activeTools.length > 0;
   const hasHistory = toolHistory.length > 0;
   const hasSubagents = subagentResults.length > 0;
+  const hasSearchProgress = searchProgress !== null;
 
   return (
     <div className="h-full flex flex-col">
@@ -51,6 +56,11 @@ export function ToolPanel({
       {/* Content */}
       <ScrollArea className="flex-1 px-4 py-4">
         <div className="space-y-4">
+          {/* Search Progress Section */}
+          {hasSearchProgress && (
+            <SearchProgress progress={searchProgress} />
+          )}
+
           {/* Active Tools Section */}
           {hasActiveTools && (
             <Collapsible open={activeToolsOpen} onOpenChange={setActiveToolsOpen}>
@@ -120,7 +130,7 @@ export function ToolPanel({
           )}
 
           {/* Empty State */}
-          {!hasActiveTools && !hasHistory && !hasSubagents && (
+          {!hasActiveTools && !hasHistory && !hasSubagents && !hasSearchProgress && (
             <div className="text-center py-8">
               <p className="text-sm text-muted-foreground">
                 No tool activity yet

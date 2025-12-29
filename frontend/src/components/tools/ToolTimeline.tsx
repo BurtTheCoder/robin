@@ -10,7 +10,7 @@ import {
   Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ToolExecution } from "./ToolCard";
+import { ToolExecution } from "@/types";
 
 interface ToolTimelineProps {
   tools: ToolExecution[];
@@ -83,13 +83,13 @@ function TimelineItem({ tool, isLast }: TimelineItemProps) {
   }, [tool.duration_ms]);
 
   const formattedTime = useMemo(() => {
-    const date = new Date(tool.startedAt);
+    const date = new Date(tool.started_at);
     return date.toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
       second: "2-digit",
     });
-  }, [tool.startedAt]);
+  }, [tool.started_at]);
 
   const inputSummary = useMemo(() => {
     const input = tool.input;
@@ -156,11 +156,11 @@ function TimelineItem({ tool, isLast }: TimelineItemProps) {
 }
 
 export function ToolTimeline({ tools }: ToolTimelineProps) {
-  // Sort tools by startedAt in chronological order
+  // Sort tools by started_at in chronological order
   const sortedTools = useMemo(() => {
     return [...tools].sort(
       (a, b) =>
-        new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime()
+        new Date(a.started_at).getTime() - new Date(b.started_at).getTime()
     );
   }, [tools]);
 

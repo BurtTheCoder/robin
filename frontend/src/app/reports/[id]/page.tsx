@@ -9,7 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import ReportPreview from '@/components/reports/ReportPreview';
 import ExportOptions from '@/components/reports/ExportOptions';
-import { Report } from '@/types/graph';
+import { Report } from '@/types';
 import { getReport } from '@/lib/api';
 import { formatDateTime } from '@/lib/utils';
 
@@ -37,7 +37,7 @@ export default function ReportDetailPage() {
         setReport({
           id: params.id as string,
           title: 'APT28 Ransomware Campaign Analysis',
-          investigationId: 'inv-1',
+          investigation_id: 'inv-1',
           sections: [
             {
               id: 's1',
@@ -61,14 +61,14 @@ The campaign has resulted in significant data exfiltration and operational disru
             },
             {
               id: 's2',
-              type: 'ioc_table',
+              type: 'entities',
               title: 'Indicators of Compromise',
               content: '',
               order: 1,
             },
             {
               id: 's3',
-              type: 'analysis',
+              type: 'findings',
               title: 'Technical Analysis',
               content: `## Malware Analysis
 
@@ -93,7 +93,7 @@ The malware establishes persistence through:
             },
             {
               id: 's4',
-              type: 'text',
+              type: 'recommendations',
               title: 'Recommendations',
               content: `## Mitigation Recommendations
 
@@ -113,8 +113,8 @@ The malware establishes persistence through:
               order: 3,
             },
           ],
-          createdAt: new Date(Date.now() - 86400000).toISOString(),
-          updatedAt: new Date().toISOString(),
+          created_at: new Date(Date.now() - 86400000).toISOString(),
+          updated_at: new Date().toISOString(),
           status: 'published',
         });
         setActiveSection('s1');
@@ -186,7 +186,7 @@ The malware establishes persistence through:
                 </Badge>
               </div>
               <p className="text-sm text-slate-400">
-                Last updated {formatDateTime(report.updatedAt)}
+                Last updated {formatDateTime(report.updated_at)}
               </p>
             </div>
           </div>

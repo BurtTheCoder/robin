@@ -18,7 +18,7 @@
 - **Multi-Agent Architecture** - Specialized sub-agents for threat actors, IOCs, malware, and marketplaces
 - **Conversational Follow-ups** - Ask follow-up questions within the same session
 - **17 Dark Web Search Engines** - Concurrent searches across multiple .onion search engines
-- **Streamlit Chat UI** - Interactive web interface with streaming responses
+- **Next.js Web Interface** - Modern web UI with SSE streaming, graph visualization, and report builder
 - **CLI & Interactive Modes** - Terminal-first design with optional interactive sessions
 - **Session Continuity** - Resume investigations with full context preserved
 
@@ -97,21 +97,23 @@ pip install -r requirements.txt
 
 # Run CLI
 python main.py cli -q "ransomware payments 2024"
-
-# Or run Web UI
-python main.py ui
 ```
 
-### Docker (Web UI)
+### Web Interface (Next.js + FastAPI)
 
 ```bash
-docker pull apurvsg/robin:latest
+# Install backend and frontend dependencies
+pip install -r backend/requirements.txt
+cd frontend && npm install
 
-docker run --rm \
-   -e ANTHROPIC_API_KEY="your-key" \
-   -p 8501:8501 \
-   apurvsg/robin:latest ui --ui-port 8501 --ui-host 0.0.0.0
+# Run backend (in one terminal)
+cd backend && uvicorn app.main:app --reload
+
+# Run frontend (in another terminal)
+cd frontend && npm run dev
 ```
+
+Open `http://localhost:3000` for the web interface.
 
 ---
 
@@ -133,17 +135,6 @@ python main.py cli -q "credential dumps" -o my_report.md
 python main.py cli -q "zero day exploits" -m claude-opus-4-5-20250514
 ```
 
-### Web UI Mode
-
-```bash
-python main.py ui
-
-# Custom port
-python main.py ui --ui-port 8080
-```
-
-Open `http://localhost:8501` for the chat interface.
-
 ### CLI Options
 
 ```
@@ -151,7 +142,6 @@ Robin: AI-Powered Dark Web OSINT Agent
 
 Commands:
   cli  Run investigation from command line
-  ui   Launch Streamlit web interface
 
 CLI Options:
   -q, --query TEXT     Investigation query (required)
@@ -164,7 +154,6 @@ Examples:
   python main.py cli -q "ransomware payments"
   python main.py cli -q "threat actor APT28" --interactive
   python main.py cli -q "dark web marketplaces" -o report.md
-  python main.py ui --ui-port 8080
 ```
 
 ### Python API
@@ -224,6 +213,17 @@ robin/
 │   ├── tools.py          # Custom MCP tools
 │   ├── prompts.py        # System prompts for all agents
 │   └── subagents.py      # Specialized sub-agent classes
+├── backend/              # FastAPI backend
+│   └── app/
+│       ├── api/routes/   # API endpoints
+│       ├── db/           # Database models
+│       ├── services/     # Agent and report services
+│       └── main.py       # FastAPI application
+├── frontend/             # Next.js frontend
+│   └── src/
+│       ├── app/          # Next.js pages
+│       ├── components/   # React components
+│       └── stores/       # Zustand state management
 ├── core/
 │   ├── search.py         # Dark web search engine integration
 │   └── scrape.py         # Tor-based content scraping
@@ -234,7 +234,6 @@ robin/
 │   └── test_prompts.py   # Prompt validation tests
 ├── config.py             # Configuration management
 ├── main.py               # CLI entry point
-├── ui.py                 # Streamlit web interface
 └── requirements.txt      # Python dependencies
 ```
 

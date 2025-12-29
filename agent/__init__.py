@@ -1,6 +1,6 @@
 """Robin Agent SDK module."""
 from .client import RobinAgent, InvestigationResult, run_investigation
-from .tools import darkweb_search, darkweb_scrape, save_report, delegate_analysis
+from .tools import TOOL_DEFINITIONS, execute_tool, darkweb_search, darkweb_scrape, save_report, delegate_analysis
 from .prompts import (
     ROBIN_SYSTEM_PROMPT,
     SUBAGENT_PROMPTS,

@@ -11,6 +11,8 @@ robin_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(robin_root))
 
 from agent import RobinAgent, InvestigationResult
+from agent.tools import set_search_progress_callback
+from core.search import SearchProgress
 from ..sse.stream import SSEStreamManager
 from ..config import get_settings
 
@@ -41,12 +43,37 @@ class AgentService:
         self._full_response: str = ""
         self._result: Optional[InvestigationResult] = None
 
+        # Event loop reference for cross-thread callbacks
+        self._loop: Optional[asyncio.AbstractEventLoop] = None
+
         # Create agent with callbacks
         self._agent = RobinAgent(
             on_text=self._on_text,
             on_tool_use=self._on_tool_use,
             on_complete=self._on_complete,
             model=self.model,
+        )
+
+    def _on_search_progress(self, progress: SearchProgress) -> None:
+        """Callback for search progress - emit SSE event (called from thread pool)."""
+        print(f"[DEBUG] Search progress: {progress.engine_name} - {progress.status} - {progress.message}")
+
+        if self._loop is None:
+            print("[DEBUG] No event loop, skipping progress emit")
+            return
+
+        # Schedule the async emit on the main event loop
+        asyncio.run_coroutine_threadsafe(
+            self.stream.emit_search_progress(
+                engine_name=progress.engine_name,
+                status=progress.status,
+                results_count=progress.results_count,
+                total_engines=progress.total_engines,
+                completed_engines=progress.completed_engines,
+                total_results=progress.total_results,
+                message=progress.message,
+            ),
+            self._loop
         )
 
     def _on_text(self, text: str) -> None:
@@ -116,16 +143,28 @@ class AgentService:
         Returns:
             InvestigationResult with full response and metadata
         """
+        # Store event loop for cross-thread callbacks
+        self._loop = asyncio.get_running_loop()
+
+        # Set search progress callback
+        set_search_progress_callback(self._on_search_progress)
+
         try:
             async for _ in self._agent.investigate(query):
-                # Text is handled by on_text callback
-                pass
+                # Yield control so SSE emit tasks can run
+                await asyncio.sleep(0)
+
+            # Give time for any pending emit tasks to complete
+            await asyncio.sleep(0.1)
 
             return self._result or InvestigationResult(text=self._full_response)
 
         except Exception as e:
             await self.stream.emit_error(str(e))
             raise
+        finally:
+            # Clear the callback
+            set_search_progress_callback(None)
 
     async def follow_up(self, query: str) -> InvestigationResult:
         """
@@ -139,15 +178,28 @@ class AgentService:
         """
         self._full_response = ""  # Reset for new response
 
+        # Store event loop for cross-thread callbacks
+        self._loop = asyncio.get_running_loop()
+
+        # Set search progress callback
+        set_search_progress_callback(self._on_search_progress)
+
         try:
             async for _ in self._agent.follow_up(query):
-                pass
+                # Yield control so SSE emit tasks can run
+                await asyncio.sleep(0)
+
+            # Give time for any pending emit tasks to complete
+            await asyncio.sleep(0.1)
 
             return self._result or InvestigationResult(text=self._full_response)
 
         except Exception as e:
             await self.stream.emit_error(str(e))
             raise
+        finally:
+            # Clear the callback
+            set_search_progress_callback(None)
 
     @property
     def session_id(self) -> Optional[str]:

@@ -1,7 +1,6 @@
 """Robin: AI-Powered Dark Web OSINT Tool - Main CLI entry point."""
 import asyncio
 import click
-import sys
 from datetime import datetime
 
 from config import DEFAULT_MODEL
@@ -119,46 +118,6 @@ async def _run_cli(query: str, output: str, interactive: bool, model: str):
             except (KeyboardInterrupt, EOFError):
                 click.echo("\n\nExiting interactive mode.")
                 break
-
-
-@robin.command()
-@click.option(
-    "--ui-port",
-    default=8501,
-    show_default=True,
-    type=int,
-    help="Port for the Streamlit UI",
-)
-@click.option(
-    "--ui-host",
-    default="localhost",
-    show_default=True,
-    type=str,
-    help="Host for the Streamlit UI",
-)
-def ui(ui_port: int, ui_host: str):
-    """Run Robin in Web UI mode."""
-    import os
-    from streamlit.web import cli as stcli
-
-    # Handle PyInstaller one-file mode
-    if getattr(sys, "frozen", False):
-        base = sys._MEIPASS
-    else:
-        base = os.path.dirname(__file__)
-
-    ui_script = os.path.join(base, "ui.py")
-
-    sys.argv = [
-        "streamlit",
-        "run",
-        ui_script,
-        f"--server.port={ui_port}",
-        f"--server.address={ui_host}",
-        "--global.developmentMode=false",
-    ]
-
-    sys.exit(stcli.main())
 
 
 if __name__ == "__main__":

@@ -25,7 +25,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import SectionEditor from './SectionEditor';
-import { ReportSection } from '@/types/graph';
+import { ReportSection } from '@/types';
 
 interface ReportBuilderProps {
   sections: ReportSection[];
@@ -35,9 +35,11 @@ interface ReportBuilderProps {
 
 const SECTION_TYPES: { value: ReportSection['type']; label: string; description: string }[] = [
   { value: 'summary', label: 'Summary', description: 'Executive summary or overview' },
-  { value: 'text', label: 'Text', description: 'Free-form text content' },
-  { value: 'ioc_table', label: 'IOC Table', description: 'Table of indicators of compromise' },
-  { value: 'analysis', label: 'Analysis', description: 'Technical analysis section' },
+  { value: 'findings', label: 'Findings', description: 'Key findings and analysis' },
+  { value: 'entities', label: 'Entities', description: 'Extracted entities and IOCs' },
+  { value: 'timeline', label: 'Timeline', description: 'Chronological event timeline' },
+  { value: 'recommendations', label: 'Recommendations', description: 'Recommended actions' },
+  { value: 'custom', label: 'Custom', description: 'Free-form custom content' },
 ];
 
 export default function ReportBuilder({

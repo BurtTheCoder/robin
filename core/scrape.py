@@ -1,10 +1,11 @@
 import random
 import requests
-import threading
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from bs4 import BeautifulSoup
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
+from config import TOR_SOCKS_PROXY
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -39,8 +40,8 @@ def get_tor_session():
     session.mount("https://", adapter)
     
     session.proxies = {
-        "http": "socks5h://127.0.0.1:9050",
-        "https": "socks5h://127.0.0.1:9050"
+        "http": TOR_SOCKS_PROXY,
+        "https": TOR_SOCKS_PROXY
     }
     return session
 

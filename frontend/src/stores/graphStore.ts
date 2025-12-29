@@ -1,13 +1,14 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import type {
-  GraphNode,
-  GraphEdge,
-  GraphData,
-  GraphFilters,
-  EntityType,
-} from '@/types';
-import { investigationAPI } from '@/lib/api';
+import type { GraphNode, GraphEdge, GraphData } from '@/types/graph';
+import { getInvestigationGraph } from '@/lib/api';
+
+// Define filter types locally since they're different from the API types
+interface GraphFilters {
+  types: GraphNode['type'][];
+  minConfidence?: number;
+  searchQuery?: string;
+}
 
 // ============================================
 // Types
@@ -54,7 +55,7 @@ interface GraphActions {
 
   // Filtering
   setFilters: (filters: Partial<GraphFilters>) => void;
-  toggleTypeFilter: (type: EntityType) => void;
+  toggleTypeFilter: (type: GraphNode['type']) => void;
   resetFilters: () => void;
 
   // Layout and view
@@ -109,7 +110,7 @@ export const useGraphStore = create<GraphStore>()(
         set({ isLoading: true, error: null });
 
         try {
-          const data = await investigationAPI.getGraph(investigationId);
+          const data = await getInvestigationGraph(investigationId);
           set({
             nodes: data.nodes,
             edges: data.edges,
@@ -202,7 +203,7 @@ export const useGraphStore = create<GraphStore>()(
       },
 
       // Toggle a type filter
-      toggleTypeFilter: (type: EntityType) => {
+      toggleTypeFilter: (type: GraphNode['type']) => {
         set((state) => {
           const types = state.filters.types.includes(type)
             ? state.filters.types.filter((t) => t !== type)
@@ -252,23 +253,22 @@ export const useGraphStore = create<GraphStore>()(
             return false;
           }
 
-          // Filter by confidence
-          if (
-            filters.minConfidence !== undefined &&
-            node.data.confidence !== undefined &&
-            node.data.confidence < filters.minConfidence
-          ) {
-            return false;
+          // Filter by confidence (GraphNode has confidence at top level)
+          if (filters.minConfidence !== undefined) {
+            const confidenceValue = { high: 3, medium: 2, low: 1 }[node.confidence] || 0;
+            if (confidenceValue < filters.minConfidence) {
+              return false;
+            }
           }
 
           // Filter by search query
           if (filters.searchQuery) {
             const query = filters.searchQuery.toLowerCase();
             const matchesLabel = node.label.toLowerCase().includes(query);
-            const matchesDescription = node.data.description
-              ?.toLowerCase()
-              .includes(query);
-            if (!matchesLabel && !matchesDescription) {
+            const matchesProperties = Object.values(node.properties || {}).some(
+              (val) => String(val).toLowerCase().includes(query)
+            );
+            if (!matchesLabel && !matchesProperties) {
               return false;
             }
           }
@@ -335,14 +335,14 @@ export const selectSelectedNode = (state: GraphStore): GraphNode | undefined => 
 // Selector for node count by type
 export const selectNodeCountByType = (
   state: GraphStore
-): Record<EntityType, number> => {
+): Record<GraphNode['type'], number> => {
   const counts: Record<string, number> = {};
 
   state.nodes.forEach((node) => {
     counts[node.type] = (counts[node.type] || 0) + 1;
   });
 
-  return counts as Record<EntityType, number>;
+  return counts as Record<GraphNode['type'], number>;
 };
 
 export default useGraphStore;

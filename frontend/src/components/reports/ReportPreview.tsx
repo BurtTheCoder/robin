@@ -3,7 +3,7 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Report, IOCEntry } from '@/types/graph';
+import { Report, IOCEntry } from '@/types';
 import IOCTable from './IOCTable';
 import { formatDateTime } from '@/lib/utils';
 
@@ -30,8 +30,8 @@ export default function ReportPreview({ report }: ReportPreviewProps) {
       <div className="mb-8 pb-6 border-b border-slate-700">
         <h1 className="text-3xl font-bold text-slate-100 mb-2">{report.title}</h1>
         <div className="flex items-center gap-4 text-sm text-slate-400">
-          <span>Created: {formatDateTime(report.createdAt)}</span>
-          <span>Last updated: {formatDateTime(report.updatedAt)}</span>
+          <span>Created: {formatDateTime(report.created_at)}</span>
+          <span>Last updated: {formatDateTime(report.updated_at)}</span>
         </div>
       </div>
 
@@ -65,7 +65,7 @@ export default function ReportPreview({ report }: ReportPreviewProps) {
         >
           <h2 className="text-2xl font-semibold text-slate-100 mb-4">{section.title}</h2>
 
-          {section.type === 'ioc_table' ? (
+          {section.type === 'entities' ? (
             <IOCTable iocs={MOCK_IOCS} editable={false} />
           ) : (
             <div className="text-slate-300">

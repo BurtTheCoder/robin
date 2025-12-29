@@ -14,14 +14,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-export interface ToolExecution {
-  id: string;
-  tool: string;
-  input: Record<string, unknown>;
-  status: "running" | "completed";
-  duration_ms?: number;
-  startedAt: Date;
-}
+import { ToolExecution } from "@/types";
 
 interface ToolCardProps extends ToolExecution {}
 
@@ -79,7 +72,7 @@ export function ToolCard({
   input,
   status,
   duration_ms,
-  startedAt,
+  started_at,
 }: ToolCardProps) {
   const config = TOOL_CONFIG[tool] || { ...DEFAULT_TOOL_CONFIG, label: tool };
   const Icon = config.icon;

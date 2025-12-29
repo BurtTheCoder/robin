@@ -7,17 +7,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first for caching
+# Copy and install backend requirements
+COPY backend/requirements.txt ./backend/
+RUN pip install --no-cache-dir -r backend/requirements.txt
+
+# Copy and install main requirements (for agent SDK)
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy Robin agent code (parent directory)
-COPY ../agent /app/agent
-COPY ../core /app/core
-COPY ../config.py /app/config.py
+# Copy Robin agent code
+COPY agent /app/agent
+COPY core /app/core
+COPY config.py /app/config.py
 
 # Copy backend code
-COPY app /app/backend/app
+COPY backend/app /app/backend/app
 
 # Set Python path
 ENV PYTHONPATH=/app:/app/backend

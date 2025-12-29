@@ -27,7 +27,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import IOCTable from './IOCTable';
-import { ReportSection, IOCEntry } from '@/types/graph';
+import { ReportSection, IOCEntry } from '@/types';
 
 interface SectionEditorProps {
   section: ReportSection;
@@ -38,9 +38,11 @@ interface SectionEditorProps {
 
 const SECTION_TYPES: { value: ReportSection['type']; label: string }[] = [
   { value: 'summary', label: 'Summary' },
-  { value: 'text', label: 'Text' },
-  { value: 'ioc_table', label: 'IOC Table' },
-  { value: 'analysis', label: 'Analysis' },
+  { value: 'findings', label: 'Findings' },
+  { value: 'entities', label: 'Entities' },
+  { value: 'timeline', label: 'Timeline' },
+  { value: 'recommendations', label: 'Recommendations' },
+  { value: 'custom', label: 'Custom' },
 ];
 
 // Mock IOC data for development
@@ -162,7 +164,7 @@ export default function SectionEditor({
       {/* Section Content */}
       {!isCollapsed && (
         <div className="p-4">
-          {section.type === 'ioc_table' ? (
+          {section.type === 'entities' ? (
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <Table className="h-4 w-4 text-slate-400" />

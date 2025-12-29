@@ -25,7 +25,7 @@ interface ThreatGraphProps {
   searchQuery?: string;
 }
 
-const stylesheet: cytoscape.Stylesheet[] = [
+const stylesheet: cytoscape.StylesheetStyle[] = [
   {
     selector: 'node',
     style: {
@@ -355,7 +355,7 @@ export function useThreatGraph() {
 
   const fitToScreen = () => {
     if (cyRef.current) {
-      cyRef.current.animate({ fit: { padding: 50 }, duration: 300 });
+      cyRef.current.animate({ fit: { eles: cyRef.current.elements(), padding: 50 }, duration: 300 });
     }
   };
 

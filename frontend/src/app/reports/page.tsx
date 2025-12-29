@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Report } from '@/types/graph';
+import { Report } from '@/types';
 import { getReports } from '@/lib/api';
 import { formatRelativeTime, truncate } from '@/lib/utils';
 
@@ -29,7 +29,7 @@ export default function ReportsPage() {
     async function loadReports() {
       try {
         const data = await getReports();
-        setReports(data);
+        setReports(data.reports);
       } catch (err) {
         console.error('Failed to load reports:', err);
         // Mock data for development
@@ -37,37 +37,37 @@ export default function ReportsPage() {
           {
             id: '1',
             title: 'APT28 Ransomware Campaign Analysis',
-            investigationId: 'inv-1',
+            investigation_id: 'inv-1',
             sections: [
               { id: 's1', type: 'summary', title: 'Executive Summary', content: 'This report analyzes...', order: 0 },
-              { id: 's2', type: 'ioc_table', title: 'Indicators of Compromise', content: '', order: 1 },
+              { id: 's2', type: 'entities', title: 'Indicators of Compromise', content: '', order: 1 },
             ],
-            createdAt: new Date(Date.now() - 86400000).toISOString(),
-            updatedAt: new Date().toISOString(),
+            created_at: new Date(Date.now() - 86400000).toISOString(),
+            updated_at: new Date().toISOString(),
             status: 'published',
           },
           {
             id: '2',
             title: 'Dark Market Vendor Investigation',
-            investigationId: 'inv-2',
+            investigation_id: 'inv-2',
             sections: [
               { id: 's3', type: 'summary', title: 'Summary', content: 'Investigation of...', order: 0 },
             ],
-            createdAt: new Date(Date.now() - 172800000).toISOString(),
-            updatedAt: new Date(Date.now() - 3600000).toISOString(),
+            created_at: new Date(Date.now() - 172800000).toISOString(),
+            updated_at: new Date(Date.now() - 3600000).toISOString(),
             status: 'draft',
           },
           {
             id: '3',
             title: 'Critical CVE Exploitation Report',
-            investigationId: 'inv-3',
+            investigation_id: 'inv-3',
             sections: [
               { id: 's4', type: 'summary', title: 'Overview', content: 'Critical vulnerability...', order: 0 },
-              { id: 's5', type: 'analysis', title: 'Technical Analysis', content: 'Detailed analysis...', order: 1 },
-              { id: 's6', type: 'ioc_table', title: 'IOCs', content: '', order: 2 },
+              { id: 's5', type: 'findings', title: 'Technical Analysis', content: 'Detailed analysis...', order: 1 },
+              { id: 's6', type: 'entities', title: 'IOCs', content: '', order: 2 },
             ],
-            createdAt: new Date(Date.now() - 604800000).toISOString(),
-            updatedAt: new Date(Date.now() - 86400000).toISOString(),
+            created_at: new Date(Date.now() - 604800000).toISOString(),
+            updated_at: new Date(Date.now() - 86400000).toISOString(),
             status: 'published',
           },
         ]);
@@ -208,10 +208,10 @@ export default function ReportsPage() {
                   <div className="flex items-center gap-4 text-xs text-slate-500">
                     <div className="flex items-center gap-1">
                       <Clock className="h-3 w-3" />
-                      <span>Created {formatRelativeTime(report.createdAt)}</span>
+                      <span>Created {formatRelativeTime(report.created_at)}</span>
                     </div>
-                    {report.updatedAt !== report.createdAt && (
-                      <span>Updated {formatRelativeTime(report.updatedAt)}</span>
+                    {report.updated_at !== report.created_at && (
+                      <span>Updated {formatRelativeTime(report.updated_at)}</span>
                     )}
                   </div>
                 </CardContent>

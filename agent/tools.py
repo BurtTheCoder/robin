@@ -1,27 +1,151 @@
 """Custom tools for the Robin OSINT agent."""
 import asyncio
-import re
 from datetime import datetime
-from typing import Any
-
-from claude_code_sdk import tool
+from typing import Any, Callable, Optional
+from contextvars import ContextVar
 
 # Import core functionality
-from core.search import get_search_results
+from core.search import get_search_results, SearchProgress
 from core.scrape import scrape_multiple
 
 # Import sub-agent orchestration
-from .subagents import run_subagent, run_subagents_parallel, get_available_subagents
+from .subagents import run_subagents_parallel, get_available_subagents
 
-
-@tool(
-    "darkweb_search",
-    "Search multiple dark web search engines simultaneously via Tor. Returns deduplicated results with titles and .onion links. Use this to gather initial intelligence on a topic.",
-    {
-        "query": str,
-        "max_workers": int,
-    }
+# Context variable for progress callback (set by AgentService)
+_progress_callback: ContextVar[Optional[Callable[[SearchProgress], None]]] = ContextVar(
+    '_progress_callback', default=None
 )
+
+
+def set_search_progress_callback(callback: Optional[Callable[[SearchProgress], None]]) -> None:
+    """Set the callback for search progress updates."""
+    _progress_callback.set(callback)
+
+
+def get_search_progress_callback() -> Optional[Callable[[SearchProgress], None]]:
+    """Get the current search progress callback."""
+    return _progress_callback.get()
+
+
+# Tool definitions for Anthropic API
+TOOL_DEFINITIONS = [
+    {
+        "name": "darkweb_search",
+        "description": "Search multiple dark web search engines simultaneously via Tor. Returns deduplicated results with titles and .onion links. Use this to gather initial intelligence on a topic.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "The search query to run across dark web search engines"
+                },
+                "max_workers": {
+                    "type": "integer",
+                    "description": "Number of concurrent search workers (default 5)",
+                    "default": 5
+                }
+            },
+            "required": ["query"]
+        }
+    },
+    {
+        "name": "darkweb_scrape",
+        "description": "Scrape and extract text content from .onion URLs via Tor. Pass a list of target objects, each with 'title' and 'link' keys. Returns cleaned text content from each page.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "targets": {
+                    "type": "array",
+                    "description": "List of targets to scrape, each with 'title' and 'link' keys",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "title": {"type": "string"},
+                            "link": {"type": "string"}
+                        },
+                        "required": ["link"]
+                    }
+                },
+                "max_workers": {
+                    "type": "integer",
+                    "description": "Number of concurrent scraping workers (default 5)",
+                    "default": 5
+                }
+            },
+            "required": ["targets"]
+        }
+    },
+    {
+        "name": "save_report",
+        "description": "Save the investigation report to a markdown file. Use this when the user asks to save or export the findings.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string",
+                    "description": "The report content to save"
+                },
+                "filename": {
+                    "type": "string",
+                    "description": "Optional filename (defaults to robin_report_<timestamp>.md)"
+                }
+            },
+            "required": ["content"]
+        }
+    },
+    {
+        "name": "delegate_analysis",
+        "description": """Delegate specialized analysis to expert sub-agents. Available agents:
+- ThreatActorProfiler: Profiles threat actors, APT groups, cybercriminals
+- IOCExtractor: Extracts IPs, domains, hashes, emails, crypto addresses
+- MalwareAnalyst: Analyzes malware, ransomware, exploits
+- MarketplaceInvestigator: Investigates dark web markets and vendors
+
+You can delegate to multiple agents simultaneously for comprehensive analysis.""",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "agent_types": {
+                    "type": "array",
+                    "description": "List of agent types to run",
+                    "items": {"type": "string"}
+                },
+                "content": {
+                    "type": "string",
+                    "description": "The scraped content to analyze"
+                },
+                "context": {
+                    "type": "string",
+                    "description": "Additional context (original query, investigation goals)"
+                }
+            },
+            "required": ["agent_types", "content"]
+        }
+    }
+]
+
+
+async def execute_tool(tool_name: str, args: dict[str, Any]) -> str:
+    """Execute a tool by name and return the result as a string."""
+    if tool_name == "darkweb_search":
+        result = await darkweb_search(args)
+    elif tool_name == "darkweb_scrape":
+        result = await darkweb_scrape(args)
+    elif tool_name == "save_report":
+        result = await save_report(args)
+    elif tool_name == "delegate_analysis":
+        result = await delegate_analysis(args)
+    else:
+        return f"Unknown tool: {tool_name}"
+
+    # Extract text from result
+    if isinstance(result, dict) and "content" in result:
+        content = result["content"]
+        if isinstance(content, list) and len(content) > 0:
+            return content[0].get("text", str(content))
+    return str(result)
+
+
 async def darkweb_search(args: dict[str, Any]) -> dict[str, Any]:
     """
     Search 17 dark web search engines concurrently via Tor.
@@ -30,12 +154,20 @@ async def darkweb_search(args: dict[str, Any]) -> dict[str, Any]:
     query = args["query"]
     max_workers = args.get("max_workers", 5)
 
+    # Get progress callback if available
+    progress_callback = get_search_progress_callback()
+    print(f"[DEBUG] darkweb_search: progress_callback is {'SET' if progress_callback else 'NONE'}")
+
     # Run synchronous search in executor
     loop = asyncio.get_running_loop()
     try:
         results = await loop.run_in_executor(
             None,
-            lambda: get_search_results(query.replace(" ", "+"), max_workers=max_workers)
+            lambda: get_search_results(
+                query,
+                max_workers=max_workers,
+                on_progress=progress_callback
+            )
         )
     except Exception as e:
         return {
@@ -80,22 +212,10 @@ async def darkweb_search(args: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-@tool(
-    "darkweb_scrape",
-    "Scrape and extract text content from .onion URLs via Tor. Pass a list of target objects, each with 'title' and 'link' keys. Returns cleaned text content from each page.",
-    {
-        "targets": list,
-        "max_workers": int,
-    }
-)
 async def darkweb_scrape(args: dict[str, Any]) -> dict[str, Any]:
     """
     Scrape multiple .onion URLs concurrently via Tor.
     Returns cleaned text content for each URL.
-
-    Args:
-        targets: List of dicts with 'title' and 'link' keys
-        max_workers: Number of concurrent scraping threads (default 5)
     """
     targets = args["targets"]
     max_workers = args.get("max_workers", 5)
@@ -178,14 +298,6 @@ async def darkweb_scrape(args: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-@tool(
-    "save_report",
-    "Save the investigation report to a markdown file. Use this when the user asks to save or export the findings.",
-    {
-        "content": str,
-        "filename": str,
-    }
-)
 async def save_report(args: dict[str, Any]) -> dict[str, Any]:
     """
     Save the final report to a markdown file.
@@ -219,29 +331,9 @@ async def save_report(args: dict[str, Any]) -> dict[str, Any]:
         }
 
 
-@tool(
-    "delegate_analysis",
-    """Delegate specialized analysis to expert sub-agents. Available agents:
-- ThreatActorProfiler: Profiles threat actors, APT groups, cybercriminals
-- IOCExtractor: Extracts IPs, domains, hashes, emails, crypto addresses
-- MalwareAnalyst: Analyzes malware, ransomware, exploits
-- MarketplaceInvestigator: Investigates dark web markets and vendors
-
-You can delegate to multiple agents simultaneously for comprehensive analysis.""",
-    {
-        "agent_types": list,
-        "content": str,
-        "context": str,
-    }
-)
 async def delegate_analysis(args: dict[str, Any]) -> dict[str, Any]:
     """
     Delegate analysis to specialized sub-agents.
-
-    Args:
-        agent_types: List of agent types to run (e.g., ["IOCExtractor", "MalwareAnalyst"])
-        content: The scraped content to analyze
-        context: Additional context (original query, investigation goals)
     """
     agent_types = args["agent_types"]
     content = args["content"]

@@ -19,12 +19,19 @@ export interface InvestigationSummary {
   duration_ms?: number;
 }
 
-export interface InvestigationDetail extends Investigation {
-  messages: Message[];
-  entities: Entity[];
-  tool_executions: ToolExecution[];
+export interface InvestigationDetail {
+  id: string;
+  session_id: string | null;
+  initial_query: string;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  full_response: string | null;
+  tools_used: ToolExecution[];
   subagent_results: SubAgentResult[];
-  duration_ms?: number;
+  model: string;
+  num_turns: number | null;
+  duration_ms: number | null;
+  created_at: string;
+  completed_at: string | null;
 }
 
 // ============================================
@@ -201,6 +208,29 @@ export interface SSESubagentEndEvent {
   };
 }
 
+export interface SSESearchProgressEvent {
+  type: 'search_progress';
+  data: {
+    engine_name: string;
+    status: 'starting' | 'searching' | 'success' | 'failed' | 'timeout' | 'complete' | 'early_exit' | 'high_failure_rate';
+    results_count: number;
+    total_engines: number;
+    completed_engines: number;
+    total_results: number;
+    message: string;
+  };
+}
+
+export interface SearchProgress {
+  engine_name: string;
+  status: string;
+  results_count: number;
+  total_engines: number;
+  completed_engines: number;
+  total_results: number;
+  message: string;
+}
+
 export interface SSECompleteEvent {
   type: 'complete';
   data: {
@@ -224,6 +254,7 @@ export type SSEEvent =
   | SSEToolEndEvent
   | SSESubagentStartEvent
   | SSESubagentEndEvent
+  | SSESearchProgressEvent
   | SSECompleteEvent
   | SSEErrorEvent;
 
@@ -257,6 +288,17 @@ export interface ListInvestigationsResponse {
   total: number;
   page: number;
   page_size: number;
+}
+
+// ============================================
+// IOC Types
+// ============================================
+
+export interface IOCEntry {
+  type: 'ip' | 'domain' | 'hash' | 'email' | 'url';
+  value: string;
+  context: string;
+  confidence: 'high' | 'medium' | 'low';
 }
 
 // ============================================

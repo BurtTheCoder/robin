@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, Download, FileText, Code, FileJson, Copy, Check, Loader2 } from 'lucide-react';
+import { X, Download, FileText, Code, Copy, Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -20,7 +20,7 @@ interface ExportOptionsProps {
   onClose: () => void;
 }
 
-type ExportFormat = 'md' | 'html' | 'json';
+type ExportFormat = 'md' | 'html' | 'pdf';
 
 interface FormatOption {
   value: ExportFormat;
@@ -49,12 +49,12 @@ const FORMAT_OPTIONS: FormatOption[] = [
     extension: 'html',
   },
   {
-    value: 'json',
-    label: 'JSON',
-    description: 'Structured data for integration',
-    icon: <FileJson className="h-5 w-5" />,
-    mimeType: 'application/json',
-    extension: 'json',
+    value: 'pdf',
+    label: 'PDF',
+    description: 'Portable document format for sharing',
+    icon: <FileText className="h-5 w-5" />,
+    mimeType: 'application/pdf',
+    extension: 'pdf',
   },
 ];
 
@@ -68,7 +68,7 @@ export default function ExportOptions({ reportId, reportTitle, onClose }: Export
   const handleDownload = async () => {
     setExporting(true);
     try {
-      const blob = await exportReport(reportId, selectedFormat);
+      const blob = await exportReport(reportId, { format: selectedFormat });
       const filename = `${reportTitle.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.${selectedOption.extension}`;
       downloadBlob(blob, filename);
       onClose();
@@ -88,7 +88,7 @@ export default function ExportOptions({ reportId, reportTitle, onClose }: Export
   const handleCopyToClipboard = async () => {
     setExporting(true);
     try {
-      const blob = await exportReport(reportId, selectedFormat);
+      const blob = await exportReport(reportId, { format: selectedFormat });
       const text = await blob.text();
       await copyToClipboard(text);
       setCopied(true);

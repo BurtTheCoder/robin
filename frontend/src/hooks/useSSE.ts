@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import type { SSEEvent } from '@/types';
+import type { SSEEvent, SSEToolStartEvent, SSEToolEndEvent, SSESubagentStartEvent, SSESubagentEndEvent, SSECompleteEvent, SSEErrorEvent } from '@/types';
 import { investigationAPI } from '@/lib/api';
 
 // ============================================
@@ -10,12 +10,12 @@ import { investigationAPI } from '@/lib/api';
 
 interface UseSSEOptions {
   onText?: (content: string) => void;
-  onToolStart?: (data: SSEEvent extends { type: 'tool_start'; data: infer D } ? D : never) => void;
-  onToolEnd?: (data: SSEEvent extends { type: 'tool_end'; data: infer D } ? D : never) => void;
-  onSubagentStart?: (data: SSEEvent extends { type: 'subagent_start'; data: infer D } ? D : never) => void;
-  onSubagentEnd?: (data: SSEEvent extends { type: 'subagent_end'; data: infer D } ? D : never) => void;
-  onComplete?: (data: SSEEvent extends { type: 'complete'; data: infer D } ? D : never) => void;
-  onError?: (data: SSEEvent extends { type: 'error'; data: infer D } ? D : never) => void;
+  onToolStart?: (data: SSEToolStartEvent['data']) => void;
+  onToolEnd?: (data: SSEToolEndEvent['data']) => void;
+  onSubagentStart?: (data: SSESubagentStartEvent['data']) => void;
+  onSubagentEnd?: (data: SSESubagentEndEvent['data']) => void;
+  onComplete?: (data: SSECompleteEvent['data']) => void;
+  onError?: (data: SSEErrorEvent['data']) => void;
   autoReconnect?: boolean;
   maxReconnectAttempts?: number;
   reconnectDelay?: number;

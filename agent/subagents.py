@@ -1,9 +1,9 @@
 """Specialized sub-agents for Robin OSINT investigations."""
 import asyncio
 from dataclasses import dataclass
-from typing import Any, AsyncIterator, Optional
+from typing import Optional
 
-from claude_code_sdk import query, ClaudeCodeOptions
+import anthropic
 
 from .prompts import SUBAGENT_PROMPTS, SUBAGENT_DESCRIPTIONS
 from config import DEFAULT_MODEL
@@ -47,6 +47,7 @@ class SubAgent:
         self.model = model or DEFAULT_MODEL
         self.system_prompt = SUBAGENT_PROMPTS[agent_type]
         self.description = SUBAGENT_DESCRIPTIONS[agent_type]
+        self._client = anthropic.Anthropic()
 
     async def analyze(self, content: str, context: str = "") -> SubAgentResult:
         """
@@ -68,23 +69,24 @@ class SubAgent:
 
 Please analyze the above content according to your specialty."""
 
-        options = ClaudeCodeOptions(
-            system_prompt=self.system_prompt,
-            model=self.model,
-            max_turns=1,  # Sub-agents don't need multi-turn
-            allowed_tools=[],  # Sub-agents are analysis-only, no tools
-        )
-
         try:
+            # Run synchronous API call in executor to not block
+            loop = asyncio.get_running_loop()
+            response = await loop.run_in_executor(
+                None,
+                lambda: self._client.messages.create(
+                    model=self.model,
+                    max_tokens=4096,
+                    system=self.system_prompt,
+                    messages=[{"role": "user", "content": prompt}]
+                )
+            )
+
+            # Extract text from response
             full_response = ""
-            async for message in query(prompt=prompt, options=options):
-                if hasattr(message, 'content'):
-                    for block in message.content:
-                        if hasattr(block, 'text'):
-                            full_response += block.text
-                elif hasattr(message, 'result') and message.result:
-                    if message.result not in full_response:
-                        full_response += message.result
+            for block in response.content:
+                if hasattr(block, 'text'):
+                    full_response += block.text
 
             return SubAgentResult(
                 agent_type=self.agent_type,

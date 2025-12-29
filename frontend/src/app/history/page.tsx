@@ -5,7 +5,7 @@ import { History, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import HistoryList from '@/components/history/HistoryList';
 import HistoryFilters from '@/components/history/HistoryFilters';
-import { InvestigationSummary } from '@/types/graph';
+import { InvestigationSummary } from '@/types';
 import { getHistory, HistoryFilters as HistoryFiltersType } from '@/lib/api';
 
 const PAGE_SIZE = 20;
@@ -22,7 +22,7 @@ export default function HistoryPage() {
 
   // Filter state
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedStatuses, setSelectedStatuses] = useState<('completed' | 'failed' | 'running')[]>([]);
+  const [selectedStatuses, setSelectedStatuses] = useState<('completed' | 'error' | 'streaming' | 'pending')[]>([]);
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
 
@@ -65,64 +65,64 @@ export default function HistoryPage() {
             id: '1',
             query: 'APT28 ransomware campaign analysis',
             status: 'completed',
-            createdAt: new Date(Date.now() - 3600000).toISOString(),
+            created_at: new Date(Date.now() - 3600000).toISOString(),
             duration_ms: 45000,
-            toolsUsed: 5,
+            entity_count: 5,
           },
           {
             id: '2',
             query: 'Dark web marketplace vendor investigation',
             status: 'completed',
-            createdAt: new Date(Date.now() - 7200000).toISOString(),
+            created_at: new Date(Date.now() - 7200000).toISOString(),
             duration_ms: 32000,
-            toolsUsed: 3,
+            entity_count: 3,
           },
           {
             id: '3',
             query: 'CVE-2024-1234 exploitation research',
-            status: 'failed',
-            createdAt: new Date(Date.now() - 86400000).toISOString(),
+            status: 'error',
+            created_at: new Date(Date.now() - 86400000).toISOString(),
             duration_ms: 12000,
-            toolsUsed: 2,
+            entity_count: 2,
           },
           {
             id: '4',
             query: 'Threat actor infrastructure mapping',
-            status: 'running',
-            createdAt: new Date(Date.now() - 300000).toISOString(),
-            toolsUsed: 4,
+            status: 'streaming',
+            created_at: new Date(Date.now() - 300000).toISOString(),
+            entity_count: 4,
           },
           {
             id: '5',
             query: 'Malware family attribution analysis',
             status: 'completed',
-            createdAt: new Date(Date.now() - 172800000).toISOString(),
+            created_at: new Date(Date.now() - 172800000).toISOString(),
             duration_ms: 67000,
-            toolsUsed: 6,
+            entity_count: 6,
           },
           {
             id: '6',
             query: 'Cryptocurrency wallet tracking',
             status: 'completed',
-            createdAt: new Date(Date.now() - 259200000).toISOString(),
+            created_at: new Date(Date.now() - 259200000).toISOString(),
             duration_ms: 89000,
-            toolsUsed: 4,
+            entity_count: 4,
           },
           {
             id: '7',
             query: 'Phishing campaign infrastructure',
             status: 'completed',
-            createdAt: new Date(Date.now() - 345600000).toISOString(),
+            created_at: new Date(Date.now() - 345600000).toISOString(),
             duration_ms: 54000,
-            toolsUsed: 5,
+            entity_count: 5,
           },
           {
             id: '8',
             query: 'Data breach source identification',
-            status: 'failed',
-            createdAt: new Date(Date.now() - 432000000).toISOString(),
+            status: 'error',
+            created_at: new Date(Date.now() - 432000000).toISOString(),
             duration_ms: 8000,
-            toolsUsed: 1,
+            entity_count: 1,
           },
         ];
 
@@ -173,7 +173,7 @@ export default function HistoryPage() {
     setEndDate('');
   };
 
-  const hasActiveFilters = searchQuery || selectedStatuses.length > 0 || startDate || endDate;
+  const hasActiveFilters = !!(searchQuery || selectedStatuses.length > 0 || startDate || endDate);
 
   return (
     <div className="min-h-screen bg-slate-950 p-6">

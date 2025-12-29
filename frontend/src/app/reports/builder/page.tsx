@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, Save, Eye, EyeOff, Check } from 'lucide-react';
+import { ArrowLeft, Save, Eye, EyeOff, Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -15,10 +15,10 @@ import {
 import { Badge } from '@/components/ui/badge';
 import ReportBuilder from '@/components/reports/ReportBuilder';
 import ReportPreview from '@/components/reports/ReportPreview';
-import { Report, ReportSection, InvestigationSummary } from '@/types/graph';
+import { Report, ReportSection, InvestigationSummary, CreateReportRequest } from '@/types';
 import { getReport, getInvestigations, createReport, updateReport } from '@/lib/api';
 
-export default function ReportBuilderPage() {
+function ReportBuilderContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const reportId = searchParams.get('id');
@@ -41,7 +41,7 @@ export default function ReportBuilderPage() {
       try {
         // Load investigations
         const invData = await getInvestigations();
-        setInvestigations(invData);
+        setInvestigations(invData.investigations);
 
         if (reportId) {
           // Load existing report
@@ -49,7 +49,7 @@ export default function ReportBuilderPage() {
           setTitle(reportData.title);
           setSections(reportData.sections);
           setStatus(reportData.status);
-          setSelectedInvestigationId(reportData.investigationId);
+          setSelectedInvestigationId(reportData.investigation_id);
         } else {
           // New report - add default section
           setSections([
@@ -61,8 +61,8 @@ export default function ReportBuilderPage() {
               order: 0,
             },
           ]);
-          if (invData.length > 0 && !initialInvestigationId) {
-            setSelectedInvestigationId(invData[0].id);
+          if (invData.investigations.length > 0 && !initialInvestigationId) {
+            setSelectedInvestigationId(invData.investigations[0].id);
           }
         }
       } catch (err) {
@@ -73,15 +73,15 @@ export default function ReportBuilderPage() {
             id: 'inv-1',
             query: 'APT28 ransomware campaign',
             status: 'completed',
-            createdAt: new Date().toISOString(),
-            toolsUsed: 5,
+            created_at: new Date().toISOString(),
+            entity_count: 5,
           },
           {
             id: 'inv-2',
             query: 'Dark market vendor analysis',
             status: 'completed',
-            createdAt: new Date().toISOString(),
-            toolsUsed: 3,
+            created_at: new Date().toISOString(),
+            entity_count: 3,
           },
         ]);
         setSelectedInvestigationId('inv-1');
@@ -110,17 +110,22 @@ export default function ReportBuilderPage() {
 
     setSaving(true);
     try {
-      const reportData: Partial<Report> = {
-        title,
-        investigationId: selectedInvestigationId,
-        sections,
-        status,
-      };
-
       if (reportId) {
-        await updateReport(reportId, reportData);
+        const updateData: Partial<Report> = {
+          title,
+          investigation_id: selectedInvestigationId,
+          sections,
+          status,
+        };
+        await updateReport(reportId, updateData);
       } else {
-        const newReport = await createReport(reportData);
+        const createData: CreateReportRequest = {
+          investigation_id: selectedInvestigationId!,
+          title,
+        };
+        const newReport = await createReport(createData);
+        // Update the new report with sections and status
+        await updateReport(newReport.id, { sections, status });
         router.replace(`/reports/builder?id=${newReport.id}`);
       }
 
@@ -140,10 +145,10 @@ export default function ReportBuilderPage() {
   const previewReport: Report = {
     id: reportId || 'preview',
     title: title || 'Untitled Report',
-    investigationId: selectedInvestigationId || '',
+    investigation_id: selectedInvestigationId || '',
     sections,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
     status,
   };
 
@@ -296,5 +301,22 @@ export default function ReportBuilderPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function ReportBuilderPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+          <div className="flex items-center gap-2 text-slate-400">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            <span>Loading report builder...</span>
+          </div>
+        </div>
+      }
+    >
+      <ReportBuilderContent />
+    </Suspense>
   );
 }

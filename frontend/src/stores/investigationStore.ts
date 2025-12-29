@@ -5,6 +5,7 @@ import type {
   ToolExecution,
   SubAgentResult,
   SSECompleteEvent,
+  SearchProgress,
 } from '@/types';
 import { investigationAPI } from '@/lib/api';
 
@@ -21,6 +22,7 @@ interface InvestigationState {
   activeTools: ToolExecution[];
   toolHistory: ToolExecution[];
   subagentResults: SubAgentResult[];
+  searchProgress: SearchProgress | null;
   error: Error | null;
 
   // SSE connection (for internal use)
@@ -45,6 +47,7 @@ interface InvestigationActions {
   updateToolEnd: (id: string, duration: number, output?: Record<string, unknown>, error?: string) => void;
   addSubAgentStart: (agentType: string) => void;
   addSubAgentResult: (result: SubAgentResult) => void;
+  updateSearchProgress: (progress: SearchProgress) => void;
   completeInvestigation: (result: SSECompleteEvent['data']) => void;
   setError: (error: Error) => void;
 
@@ -68,6 +71,7 @@ const initialState: InvestigationState = {
   activeTools: [],
   toolHistory: [],
   subagentResults: [],
+  searchProgress: null,
   error: null,
   eventSource: null,
   sessionId: null,
@@ -172,16 +176,47 @@ export const useInvestigationStore = create<InvestigationStore>()(
         loadInvestigation: async (id: string): Promise<void> => {
           try {
             const details = await investigationAPI.get(id);
+
+            // Construct messages from API response
+            const messages: Message[] = [];
+
+            // Add user message from initial query
+            if (details.initial_query) {
+              messages.push({
+                id: `user-${details.created_at}`,
+                role: 'user',
+                content: details.initial_query,
+                created_at: details.created_at,
+              });
+            }
+
+            // Add assistant message from full response
+            if (details.full_response) {
+              messages.push({
+                id: `assistant-${details.completed_at || details.created_at}`,
+                role: 'assistant',
+                content: details.full_response,
+                created_at: details.completed_at || details.created_at,
+                tool_executions: details.tools_used || [],
+                subagent_results: details.subagent_results || [],
+              });
+            }
+
             set({
               currentId: id,
-              messages: details.messages,
-              toolHistory: details.tool_executions,
-              subagentResults: details.subagent_results,
-              isStreaming: false,
+              messages,
+              toolHistory: details.tools_used || [],
+              subagentResults: details.subagent_results || [],
+              isStreaming: details.status === 'running',
               currentResponse: '',
               activeTools: [],
               error: null,
             });
+
+            // If still running, connect to stream
+            if (details.status === 'running' || details.status === 'pending') {
+              get().connectToStream(id);
+            }
           } catch (error) {
             set({
               error: error instanceof Error ? error : new Error('Failed to load investigation'),
@@ -209,6 +244,9 @@ export const useInvestigationStore = create<InvestigationStore>()(
             try {
               const data = JSON.parse(event.data);
               const state = get();
+
+              // Debug: log all SSE events
+              console.log('[SSE Event]', data.type, data.data);
 
               switch (data.type) {
                 case 'text':
@@ -246,6 +284,18 @@ export const useInvestigationStore = create<InvestigationStore>()(
                     started_at: new Date().toISOString(),
                     completed_at: new Date().toISOString(),
                     duration_ms: data.data.duration_ms,
+                  });
+                  break;
+
+                case 'search_progress':
+                  state.updateSearchProgress({
+                    engine_name: data.data.engine_name,
+                    status: data.data.status,
+                    results_count: data.data.results_count,
+                    total_engines: data.data.total_engines,
+                    completed_engines: data.data.completed_engines,
+                    total_results: data.data.total_results,
+                    message: data.data.message,
                   });
                   break;
 
@@ -353,6 +403,11 @@ export const useInvestigationStore = create<InvestigationStore>()(
           });
         },
 
+        // Update search progress
+        updateSearchProgress: (progress: SearchProgress) => {
+          set({ searchProgress: progress });
+        },
+
         // Complete the investigation
         completeInvestigation: (result: SSECompleteEvent['data']) => {
           const { messages, currentResponse, toolHistory, subagentResults } = get();
@@ -372,6 +427,7 @@ export const useInvestigationStore = create<InvestigationStore>()(
             isStreaming: false,
             currentResponse: '',
             activeTools: [],
+            searchProgress: null,
             sessionId: result.session_id,
             totalDuration: result.duration_ms,
             error: null,
@@ -384,6 +440,7 @@ export const useInvestigationStore = create<InvestigationStore>()(
           set({
             isStreaming: false,
             error,
+            searchProgress: null,
             eventSource: null,
           });
         },
@@ -437,5 +494,6 @@ export const selectActiveTools = (state: InvestigationStore) => state.activeTool
 export const selectToolHistory = (state: InvestigationStore) => state.toolHistory;
 export const selectSubagentResults = (state: InvestigationStore) => state.subagentResults;
 export const selectError = (state: InvestigationStore) => state.error;
+export const selectSearchProgress = (state: InvestigationStore) => state.searchProgress;
 
 export default useInvestigationStore;

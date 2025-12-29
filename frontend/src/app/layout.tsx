@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import { Providers } from '@/providers';
 import { MainLayout } from '@/components/layout';
@@ -11,8 +11,12 @@ export const metadata: Metadata = {
   description: 'Advanced dark web intelligence and threat research platform',
   keywords: ['OSINT', 'dark web', 'threat intelligence', 'cybersecurity'],
   authors: [{ name: 'Robin Team' }],
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
   themeColor: '#0a0a0a',
-  viewport: 'width=device-width, initial-scale=1',
 };
 
 export default function RootLayout({

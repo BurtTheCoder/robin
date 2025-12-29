@@ -1,21 +1,13 @@
-"""Robin Agent client using Claude Agent SDK."""
+"""Robin Agent client using Anthropic SDK directly."""
 import asyncio
+import json
 from dataclasses import dataclass, field
 from typing import Any, AsyncIterator, Callable, Optional
 
-from claude_code_sdk import (
-    query,
-    ClaudeCodeOptions,
-    AssistantMessage,
-    ResultMessage,
-    TextBlock,
-    ToolUseBlock,
-    tool,
-    create_sdk_mcp_server,
-)
+import anthropic
 
 from .prompts import ROBIN_SYSTEM_PROMPT
-from .tools import darkweb_search, darkweb_scrape, save_report, delegate_analysis
+from .tools import TOOL_DEFINITIONS, execute_tool
 from config import DEFAULT_MODEL, MAX_AGENT_TURNS
 
 
@@ -31,12 +23,12 @@ class InvestigationResult:
 
 class RobinAgent:
     """
-    Autonomous dark web OSINT agent with session management.
+    Autonomous dark web OSINT agent using Anthropic SDK.
 
-    Wraps the Claude Agent SDK to provide:
+    Provides:
     - Dark web search and scraping via custom tools
-    - Session continuity for conversational follow-ups
     - Streaming responses with callbacks
+    - Tool use handling
     """
 
     def __init__(
@@ -61,41 +53,12 @@ class RobinAgent:
         self.model = model or DEFAULT_MODEL
         self.session_id: Optional[str] = None
         self._tools_used: list = []
-        self._mcp_server = None
+        self._messages: list = []
+        self._client = anthropic.Anthropic()
 
-    def _get_mcp_server(self):
-        """Create MCP server with custom tools (lazy initialization)."""
-        if self._mcp_server is None:
-            self._mcp_server = create_sdk_mcp_server(
-                name="robin",
-                version="1.0.0",
-                tools=[darkweb_search, darkweb_scrape, save_report, delegate_analysis]
-            )
-        return self._mcp_server
-
-    def _build_options(self) -> ClaudeCodeOptions:
-        """Build ClaudeCodeOptions with custom tools."""
-        mcp_server = self._get_mcp_server()
-
-        options = ClaudeCodeOptions(
-            system_prompt=ROBIN_SYSTEM_PROMPT,
-            model=self.model,
-            max_turns=MAX_AGENT_TURNS,
-            mcp_servers={"robin": mcp_server},
-            allowed_tools=[
-                "mcp__robin__darkweb_search",
-                "mcp__robin__darkweb_scrape",
-                "mcp__robin__save_report",
-                "mcp__robin__delegate_analysis",
-            ],
-            permission_mode="acceptEdits",
-        )
-
-        # Handle session resumption
-        if self.session_id:
-            options.resume = self.session_id
-
-        return options
+    def _get_tools(self) -> list[dict]:
+        """Get tool definitions for Claude API."""
+        return TOOL_DEFINITIONS
 
     async def investigate(
         self,
@@ -118,59 +81,135 @@ class RobinAgent:
         Yields:
             Text chunks as they arrive (if streaming)
         """
+        import time
+        start_time = time.time()
+
         self._tools_used = []
         full_response = ""
+        num_turns = 0
 
-        options = self._build_options()
+        # Add user message
+        self._messages.append({
+            "role": "user",
+            "content": query_text
+        })
 
-        async for message in query(prompt=query_text, options=options):
-            # Check for session ID in init message
-            if hasattr(message, 'subtype') and message.subtype == 'init':
-                if hasattr(message, 'data') and message.data:
-                    self.session_id = message.data.get('session_id')
-                continue
+        tools = self._get_tools()
 
-            if isinstance(message, AssistantMessage):
-                # Process assistant message content blocks
-                for block in message.content:
-                    if isinstance(block, TextBlock):
-                        text = block.text
-                        full_response += text
-                        if self.on_text:
-                            self.on_text(text)
-                        if stream:
-                            yield text
-                    elif isinstance(block, ToolUseBlock):
-                        tool_name = block.name
-                        tool_input = block.input
-                        self._tools_used.append({
-                            "name": tool_name,
-                            "input": tool_input
-                        })
-                        if self.on_tool_use:
-                            self.on_tool_use(tool_name, tool_input)
+        while num_turns < MAX_AGENT_TURNS:
+            num_turns += 1
 
-            elif isinstance(message, ResultMessage):
-                # End of response - capture final result
-                if hasattr(message, 'result') and message.result:
-                    result_text = message.result
-                    if result_text and result_text not in full_response:
-                        full_response += result_text
-                        if self.on_text:
-                            self.on_text(result_text)
-                        if stream:
-                            yield result_text
+            # Call Claude API with streaming
+            with self._client.messages.stream(
+                model=self.model,
+                max_tokens=4096,
+                system=ROBIN_SYSTEM_PROMPT,
+                messages=self._messages,
+                tools=tools,
+            ) as stream_response:
 
-                result = InvestigationResult(
-                    text=full_response,
-                    session_id=self.session_id,
-                    duration_ms=getattr(message, 'duration_ms', None),
-                    num_turns=getattr(message, 'num_turns', None),
-                    tools_used=self._tools_used.copy(),
-                )
+                assistant_content = []
+                current_text = ""
+                tool_uses = []
 
-                if self.on_complete:
-                    self.on_complete(result)
+                for event in stream_response:
+                    if event.type == "content_block_start":
+                        if event.content_block.type == "text":
+                            current_text = ""
+                        elif event.content_block.type == "tool_use":
+                            tool_uses.append({
+                                "id": event.content_block.id,
+                                "name": event.content_block.name,
+                                "input": ""
+                            })
+
+                    elif event.type == "content_block_delta":
+                        if hasattr(event.delta, "text"):
+                            text = event.delta.text
+                            current_text += text
+                            full_response += text
+                            if self.on_text:
+                                self.on_text(text)
+                            if stream:
+                                yield text
+                        elif hasattr(event.delta, "partial_json"):
+                            if tool_uses:
+                                tool_uses[-1]["input"] += event.delta.partial_json
+
+                    elif event.type == "content_block_stop":
+                        if current_text:
+                            assistant_content.append({
+                                "type": "text",
+                                "text": current_text
+                            })
+                            current_text = ""
+
+                # Process any tool uses
+                for tool in tool_uses:
+                    try:
+                        tool_input = json.loads(tool["input"]) if tool["input"] else {}
+                    except json.JSONDecodeError:
+                        tool_input = {}
+
+                    tool["input"] = tool_input
+                    assistant_content.append({
+                        "type": "tool_use",
+                        "id": tool["id"],
+                        "name": tool["name"],
+                        "input": tool_input
+                    })
+
+                    self._tools_used.append({
+                        "name": tool["name"],
+                        "input": tool_input
+                    })
+
+                    if self.on_tool_use:
+                        self.on_tool_use(tool["name"], tool_input)
+
+                # Get final message
+                final_message = stream_response.get_final_message()
+
+            # Add assistant message to history
+            self._messages.append({
+                "role": "assistant",
+                "content": assistant_content if assistant_content else [{"type": "text", "text": full_response}]
+            })
+
+            # Check if we need to handle tool results
+            if final_message.stop_reason == "tool_use":
+                tool_results = []
+                for tool in tool_uses:
+                    # Execute the tool
+                    result = await execute_tool(tool["name"], tool["input"])
+                    tool_results.append({
+                        "type": "tool_result",
+                        "tool_use_id": tool["id"],
+                        "content": result
+                    })
+
+                # Add tool results to messages
+                self._messages.append({
+                    "role": "user",
+                    "content": tool_results
+                })
+            else:
+                # No more tool calls, we're done
+                break
+
+        end_time = time.time()
+        duration_ms = int((end_time - start_time) * 1000)
+
+        result = InvestigationResult(
+            text=full_response,
+            session_id=self.session_id,
+            duration_ms=duration_ms,
+            num_turns=num_turns,
+            tools_used=self._tools_used.copy(),
+        )
+
+        if self.on_complete:
+            self.on_complete(result)
 
         if not stream:
             yield full_response
@@ -181,18 +220,12 @@ class RobinAgent:
 
         Claude remembers all previous context from the investigation.
 
-        Examples:
-            - "dig deeper into result #3"
-            - "search for more about that threat actor"
-            - "save the report"
-
         Args:
             query_text: Follow-up query
 
         Yields:
             Text responses from Claude
         """
-        # Session ID is automatically used via _build_options()
         async for chunk in self.investigate(query_text):
             yield chunk
 
@@ -200,6 +233,7 @@ class RobinAgent:
         """Clear the current session to start fresh."""
         self.session_id = None
         self._tools_used = []
+        self._messages = []
 
 
 async def run_investigation(

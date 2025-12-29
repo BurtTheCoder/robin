@@ -5,13 +5,16 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { MessageBubble } from "./MessageBubble";
 import { StreamingResponse } from "./StreamingResponse";
 import { QueryInput } from "./QueryInput";
-import { useInvestigationStore, Message } from "@/stores/investigationStore";
+import { SearchProgress } from "@/components/tools/SearchProgress";
+import { useInvestigationStore } from "@/stores/investigationStore";
+import { Message, SearchProgress as SearchProgressType } from "@/types";
 
 interface InvestigationChatProps {
   messages: Message[];
   currentResponse: string;
   isStreaming: boolean;
   investigationId: string;
+  searchProgress?: SearchProgressType | null;
 }
 
 export function InvestigationChat({
@@ -19,6 +22,7 @@ export function InvestigationChat({
   currentResponse,
   isStreaming,
   investigationId,
+  searchProgress,
 }: InvestigationChatProps) {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -29,10 +33,10 @@ export function InvestigationChat({
     if (bottomRef.current) {
       bottomRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages, currentResponse]);
+  }, [messages, currentResponse, searchProgress]);
 
   const handleSendFollowUp = async (query: string) => {
-    await sendFollowUp(investigationId, query);
+    await sendFollowUp(query);
   };
 
   return (
@@ -45,9 +49,16 @@ export function InvestigationChat({
               key={message.id || index}
               role={message.role}
               content={message.content}
-              timestamp={message.timestamp}
+              timestamp={new Date(message.created_at)}
             />
           ))}
+
+          {/* Search progress indicator - shown in main chat when searching */}
+          {searchProgress && searchProgress.status !== 'complete' && (
+            <div className="max-w-md">
+              <SearchProgress progress={searchProgress} />
+            </div>
+          )}
 
           {/* Current streaming response */}
           {currentResponse && (

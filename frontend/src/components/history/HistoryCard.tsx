@@ -27,10 +27,10 @@ import { formatRelativeTime, formatDuration, truncate } from '@/lib/utils';
 interface HistoryCardProps {
   id: string;
   query: string;
-  status: 'completed' | 'failed' | 'running';
-  createdAt: Date;
+  status: 'pending' | 'streaming' | 'completed' | 'error';
+  created_at: string;
   duration_ms?: number;
-  toolsUsed: number;
+  entity_count: number;
 }
 
 const STATUS_CONFIG = {
@@ -40,17 +40,23 @@ const STATUS_CONFIG = {
     color: 'bg-green-600 text-white',
     iconColor: 'text-green-500',
   },
-  failed: {
+  error: {
     icon: XCircle,
-    label: 'Failed',
+    label: 'Error',
     color: 'bg-red-600 text-white',
     iconColor: 'text-red-500',
   },
-  running: {
+  streaming: {
     icon: Loader2,
     label: 'Running',
     color: 'bg-blue-600 text-white',
     iconColor: 'text-blue-500',
+  },
+  pending: {
+    icon: Clock,
+    label: 'Pending',
+    color: 'bg-yellow-600 text-white',
+    iconColor: 'text-yellow-500',
   },
 };
 
@@ -58,9 +64,9 @@ export default function HistoryCard({
   id,
   query,
   status,
-  createdAt,
+  created_at,
   duration_ms,
-  toolsUsed,
+  entity_count,
 }: HistoryCardProps) {
   const router = useRouter();
   const statusConfig = STATUS_CONFIG[status];
@@ -91,12 +97,12 @@ export default function HistoryCard({
             {/* Status Icon */}
             <div
               className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${
-                status === 'running' ? 'bg-blue-500/20' : 'bg-slate-700'
+                status === 'streaming' ? 'bg-blue-500/20' : 'bg-slate-700'
               }`}
             >
               <StatusIcon
                 className={`h-5 w-5 ${statusConfig.iconColor} ${
-                  status === 'running' ? 'animate-spin' : ''
+                  status === 'streaming' ? 'animate-spin' : ''
                 }`}
               />
             </div>
@@ -117,7 +123,7 @@ export default function HistoryCard({
                   <div className="flex items-center gap-4 text-sm text-slate-400">
                     <div className="flex items-center gap-1">
                       <Clock className="h-3.5 w-3.5" />
-                      <span>{formatRelativeTime(createdAt)}</span>
+                      <span>{formatRelativeTime(created_at)}</span>
                     </div>
                     {duration_ms !== undefined && (
                       <div className="flex items-center gap-1">
@@ -126,7 +132,7 @@ export default function HistoryCard({
                     )}
                     <div className="flex items-center gap-1">
                       <Wrench className="h-3.5 w-3.5" />
-                      <span>{toolsUsed} tools</span>
+                      <span>{entity_count} entities</span>
                     </div>
                   </div>
                 </div>

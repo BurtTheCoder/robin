@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { IOCEntry, CONFIDENCE_COLORS } from '@/types/graph';
+import { IOCEntry } from '@/types';
 import { copyToClipboard } from '@/lib/utils';
 
 interface IOCTableProps {
@@ -31,6 +31,12 @@ interface IOCTableProps {
 
 type SortField = 'type' | 'value' | 'context' | 'confidence';
 type SortDirection = 'asc' | 'desc';
+
+const CONFIDENCE_COLORS: Record<IOCEntry['confidence'], string> = {
+  high: '#22c55e',
+  medium: '#eab308',
+  low: '#ef4444',
+};
 
 const IOC_TYPE_COLORS: Record<IOCEntry['type'], string> = {
   ip: 'bg-blue-600',
@@ -114,7 +120,7 @@ export default function IOCTable({ iocs, editable = false, onIOCsChange }: IOCTa
   };
 
   // Get unique types for filter
-  const uniqueTypes = [...new Set(iocs.map((ioc) => ioc.type))];
+  const uniqueTypes = Array.from(new Set(iocs.map((ioc) => ioc.type)));
 
   return (
     <div className="space-y-4">

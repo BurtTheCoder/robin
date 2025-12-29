@@ -16,7 +16,8 @@ import GraphControls from '@/components/graph/GraphControls';
 import GraphFilters from '@/components/graph/GraphFilters';
 import NodeDetails from '@/components/graph/NodeDetails';
 import GraphLegend from '@/components/graph/GraphLegend';
-import { GraphNode, GraphEdge, InvestigationSummary, NODE_STYLES } from '@/types/graph';
+import { GraphNode, GraphEdge, NODE_STYLES } from '@/types/graph';
+import { InvestigationSummary } from '@/types';
 import { getInvestigations, getInvestigationGraph } from '@/lib/api';
 import { downloadBlob } from '@/lib/utils';
 
@@ -63,10 +64,10 @@ export default function GraphPage() {
   useEffect(() => {
     async function loadInvestigations() {
       try {
-        const data = await getInvestigations();
-        setInvestigations(data);
-        if (data.length > 0) {
-          setSelectedInvestigationId(data[0].id);
+        const response = await getInvestigations();
+        setInvestigations(response.investigations);
+        if (response.investigations.length > 0) {
+          setSelectedInvestigationId(response.investigations[0].id);
         }
       } catch (err) {
         console.error('Failed to load investigations:', err);
@@ -76,19 +77,15 @@ export default function GraphPage() {
             id: '1',
             query: 'ransomware investigation',
             status: 'completed',
-            createdAt: new Date().toISOString(),
-            toolsUsed: 5,
-            nodeCount: 15,
-            edgeCount: 22,
+            created_at: new Date().toISOString(),
+            entity_count: 15,
           },
           {
             id: '2',
             query: 'marketplace vendor analysis',
             status: 'completed',
-            createdAt: new Date().toISOString(),
-            toolsUsed: 3,
-            nodeCount: 8,
-            edgeCount: 12,
+            created_at: new Date().toISOString(),
+            entity_count: 8,
           },
         ]);
         setSelectedInvestigationId('1');
@@ -161,7 +158,7 @@ export default function GraphPage() {
 
   const handleFitToScreen = useCallback(() => {
     if (cyRef.current) {
-      cyRef.current.animate({ fit: { padding: 50 }, duration: 300 });
+      cyRef.current.fit(undefined, 50);
     }
   }, []);
 
@@ -209,7 +206,7 @@ export default function GraphPage() {
   }, [nodes]);
 
   // Get unique node types present in current graph
-  const presentNodeTypes = [...new Set(nodes.map((n) => n.type))];
+  const presentNodeTypes = Array.from(new Set(nodes.map((n) => n.type)));
 
   return (
     <div ref={containerRef} className="h-screen flex flex-col bg-slate-950">

@@ -8,11 +8,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 
+type StatusType = 'completed' | 'error' | 'streaming' | 'pending';
+
 interface HistoryFiltersProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
-  selectedStatuses: ('completed' | 'failed' | 'running')[];
-  onStatusChange: (statuses: ('completed' | 'failed' | 'running')[]) => void;
+  selectedStatuses: StatusType[];
+  onStatusChange: (statuses: StatusType[]) => void;
   startDate: string;
   onStartDateChange: (date: string) => void;
   endDate: string;
@@ -21,10 +23,11 @@ interface HistoryFiltersProps {
   hasActiveFilters: boolean;
 }
 
-const STATUS_OPTIONS: { value: 'completed' | 'failed' | 'running'; label: string; color: string }[] = [
+const STATUS_OPTIONS: { value: StatusType; label: string; color: string }[] = [
   { value: 'completed', label: 'Completed', color: 'bg-green-600' },
-  { value: 'failed', label: 'Failed', color: 'bg-red-600' },
-  { value: 'running', label: 'Running', color: 'bg-blue-600' },
+  { value: 'error', label: 'Error', color: 'bg-red-600' },
+  { value: 'streaming', label: 'Running', color: 'bg-blue-600' },
+  { value: 'pending', label: 'Pending', color: 'bg-yellow-600' },
 ];
 
 export default function HistoryFilters({
@@ -39,7 +42,7 @@ export default function HistoryFilters({
   onClearFilters,
   hasActiveFilters,
 }: HistoryFiltersProps) {
-  const handleStatusToggle = (status: 'completed' | 'failed' | 'running') => {
+  const handleStatusToggle = (status: StatusType) => {
     if (selectedStatuses.includes(status)) {
       onStatusChange(selectedStatuses.filter((s) => s !== status));
     } else {

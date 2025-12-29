@@ -4,7 +4,7 @@ import React from 'react';
 import { History, AlertCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import HistoryCard from './HistoryCard';
-import { InvestigationSummary } from '@/types/graph';
+import { InvestigationSummary } from '@/types';
 
 interface HistoryListProps {
   investigations: InvestigationSummary[];
@@ -83,9 +83,9 @@ export default function HistoryList({
           id={investigation.id}
           query={investigation.query}
           status={investigation.status}
-          createdAt={new Date(investigation.createdAt)}
+          created_at={investigation.created_at}
           duration_ms={investigation.duration_ms}
-          toolsUsed={investigation.toolsUsed}
+          entity_count={investigation.entity_count}
         />
       ))}
 
