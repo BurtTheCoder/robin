@@ -222,15 +222,17 @@ function StatusBadge({ status }: { status: InvestigationSummary['status'] }) {
   > = {
     pending: { variant: 'secondary', label: 'Pending' },
     streaming: { variant: 'default', label: 'Running' },
+    running: { variant: 'default', label: 'Running' },
     completed: { variant: 'outline', label: 'Completed' },
     error: { variant: 'destructive', label: 'Error' },
+    failed: { variant: 'destructive', label: 'Failed' },
   };
 
   const { variant, label } = config[status] || config.pending;
 
   return (
     <Badge variant={variant} className="shrink-0">
-      {status === 'streaming' && (
+      {(status === 'streaming' || status === 'running') && (
         <Loader2 className="h-3 w-3 animate-spin mr-1" />
       )}
       {label}

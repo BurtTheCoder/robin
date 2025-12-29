@@ -268,15 +268,17 @@ function StatusBadge({ status }: { status: InvestigationSummary['status'] }) {
   > = {
     pending: { variant: 'secondary', label: 'Pending' },
     streaming: { variant: 'default', label: 'Running' },
+    running: { variant: 'default', label: 'Running' },
     completed: { variant: 'outline', label: 'Completed' },
     error: { variant: 'destructive', label: 'Error' },
+    failed: { variant: 'destructive', label: 'Failed' },
   };
 
   const { variant, label } = variants[status] || variants.pending;
 
   return (
     <Badge variant={variant} className="shrink-0">
-      {status === 'streaming' && (
+      {(status === 'streaming' || status === 'running') && (
         <span className="w-2 h-2 rounded-full bg-primary animate-pulse mr-1.5" />
       )}
       {label}
